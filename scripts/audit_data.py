@@ -56,10 +56,9 @@ ZSCORE_SUSPECT_ABOVE = 1000.0
 MEMBERS_CAP = 1000
 WEIGHT_BINS = ((1, 1), (2, 2), (3, 5), (6, 10), (11, None))  # inclusive; None = no upper bound
 ZSCORE_CSV_STEM = "old_mfinder_zscores"
-FIGURE9_COMPARISON = (
-    "**Not done.** Figure 9 is an image, and the Read tool cannot render PDF pages in this environment "
-    "(`pdftoppm` from poppler is not installed). The values have not been compared yet."
-)
+# Raw Z-scores printed in Figure 9 of the old repo's "Final Report 3.pdf", transcribed by the project owner.
+FIGURE9_CSV = AUDIT_DIR / "report3_fig9_zscores.csv"
+ZSCORE_MATCH_DECIMALS = 2
 
 # --- Character classes -----------------------------------------------------
 
@@ -344,6 +343,7 @@ def weight_distribution(weights: list[float]) -> dict:
             weight_bin_label(lo, hi): sum(1 for w in weights if w >= lo and (hi is None or w <= hi))
             for lo, hi in WEIGHT_BINS
         },
+        "sum": sum(weights),
         "mean": round(statistics.fmean(weights), 3) if weights else None,
         "median": statistics.median(weights) if weights else None,
         "max": max(weights, default=None),
@@ -528,6 +528,12 @@ def audit_mfinder() -> dict:
                 "source": f"git {snap['commit'][:7]} ({snap['date']})",
                 **audit_mfinder_input(git_snapshot(hpath, snap).decode("utf-8")),
             }
+
+    if FIGURE9_CSV.exists():
+        result["figure9"] = {
+            "source": str(FIGURE9_CSV.relative_to(REPO_ROOT)),
+            **compare_figure_to_runs(read_figure_zscores(FIGURE9_CSV), run_zscores(result)),
+        }
     return result
 
 
@@ -560,6 +566,42 @@ def write_zscore_csvs(mfinder: dict) -> list[Path]:
                 writer.writerow([r["text"], r["label"], r["file"]] + [r["z"][m] for m in motifs])
         paths.append(path)
     return paths
+
+
+def read_figure_zscores(path: Path) -> dict[str, dict[int, float]]:
+    """Text -> motif -> Z from a CSV with a 'text' column and one column per motif ID."""
+    with path.open(encoding="utf-8", newline="") as fh:
+        return {row.pop("text"): {int(m): float(z) for m, z in row.items()} for row in csv.DictReader(fh)}
+
+
+def compare_figure_to_runs(figure: dict[str, dict[int, float]], runs: dict[str, dict[str, dict[int, float]]]) -> dict:
+    """Cell-by-cell match (rounded to ZSCORE_MATCH_DECIMALS) of figure values against each run's Z-scores."""
+    same = lambda a, b: b is not None and round(a, ZSCORE_MATCH_DECIMALS) == round(b, ZSCORE_MATCH_DECIMALS)
+    cells = [(t, m, z) for t, row in figure.items() for m, z in row.items()]
+    per_run = {
+        run: {
+            "matched": sum(1 for t, m, z in cells if same(z, zs.get(t, {}).get(m))),
+            "mismatches": [
+                {"text": t, "motif": m, "figure": z, "run": zs.get(t, {}).get(m)}
+                for t, m, z in cells if not same(z, zs.get(t, {}).get(m))
+            ],
+        }
+        for run, zs in runs.items()
+    }
+    neither = [
+        {"text": t, "motif": m, "figure": z, **{run: zs.get(t, {}).get(m) for run, zs in runs.items()}}
+        for t, m, z in cells
+        if not any(same(z, zs.get(t, {}).get(m)) for zs in runs.values())
+    ]
+    return {"cells": len(cells), "runs": per_run, "matches_neither": neither}
+
+
+def run_zscores(mfinder: dict) -> dict[str, dict[str, dict[int, float]]]:
+    """Run -> text -> motif -> Z, from the parsed OUT files."""
+    result: dict[str, dict[str, dict[int, float]]] = {}
+    for o in mfinder["out"].values():
+        result.setdefault(o["run"], {})[o["text"]] = {m: row["z"] for m, row in o["motifs"].items()}
+    return result
 
 
 # --- Markdown report -------------------------------------------------------
@@ -751,7 +793,40 @@ def render_mfinder_markdown(m: dict) -> list[str]:
                                        for i in range(len(rows_a))]],
             ))
 
-    L += ["", "### Comparison with Figure 9 of `Final Report 3.pdf`", "", FIGURE9_COMPARISON]
+    L += ["", "### Comparison with Figure 9 of `Final Report 3.pdf`", ""]
+    fig = m.get("figure9")
+    if fig:
+        L += [f"Figure values: `{fig['source']}` (raw Z-scores read off the figure by the project owner).",
+              f"Cells compared after rounding both sides to {ZSCORE_MATCH_DECIMALS} decimals.", ""]
+        L.append(md_table(["Run", "Cells matching", "Cells not matching"],
+                          [[run, f"{r['matched']} / {fig['cells']}", len(r["mismatches"])]
+                           for run, r in fig["runs"].items()]))
+        L += ["", f"Cells matching neither run: {len(fig['matches_neither'])}."]
+        if fig["matches_neither"]:
+            runs = list(fig["runs"])
+            L += ["", md_table(["Text", "Motif", "Figure"] + runs,
+                               [[c["text"], c["motif"], c["figure"]] + [c[r] for r in runs]
+                                for c in fig["matches_neither"]])]
+    else:
+        L.append(f"Not done: `{FIGURE9_CSV.relative_to(REPO_ROOT)}` not found.")
+
+    if m["inputs"]:
+        labels = {Path(name).stem: label for name, label in TEXTS}
+        ranked = sorted(m["inputs"].items(), key=lambda kv: -kv[1]["edges"])
+        L += ["", "### Network size per text (old input files)", "",
+              "Ranked by edge count. Edges are distinct directed word pairs (weights not summed);",
+              "weighted total = sum of the weight column.", ""]
+        L.append(md_table(
+            ["Rank", "Text", "Label", "Nodes", "Edges", "Edges per node", "Weighted total"],
+            [[i, text_id(k), labels.get(text_id(k), ""), v["nodes"], v["edges"],
+              round(v["edges"] / v["nodes"], 2), int(v["weights"]["sum"])]
+             for i, (k, v) in enumerate(ranked, start=1)],
+        ))
+        rank = {text_id(k): i for i, (k, _) in enumerate(ranked, start=1)}
+        top = text_id(ranked[0][0])
+        L += ["", f"Final Report 3 says Braude's (Ru4) Z-scores are larger because its network \"contains more "
+              f"connections overall\". By edge count Ru4 ranks {rank.get('Ru4')} of {len(ranked)}; the largest "
+              f"network is {top} ({labels.get(top, '')})."]
 
     L += ["", f"### MEMBERS files: members per motif (cap {MEMBERS_CAP})", "",
           "Each cell: count in mfinder's `Partial list of N members:` header / member rows listed /",

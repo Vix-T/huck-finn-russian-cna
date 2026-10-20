@@ -93,6 +93,18 @@ class MfinderTests(unittest.TestCase):
         self.assertEqual(result["weights"]["bins"], {"1": 3, "2": 0, "3-5": 1, "6-10": 0, "11+": 0})
         self.assertEqual(result["weights"]["max"], 4.0)
 
+    def test_compare_figure_to_runs(self):
+        figure = {"Ru1": {6: 5.30, 12: 6.22}, "Ru2": {6: 1.00, 12: 2.00}}
+        runs = {
+            "a": {"Ru1": {6: 5.3, 12: 6.22}, "Ru2": {6: 1.0, 12: 9.99}},
+            "b": {"Ru1": {6: 5.3, 12: 5.70}, "Ru2": {6: 1.004, 12: 8.0}},
+        }
+        result = a.compare_figure_to_runs(figure, runs)
+        self.assertEqual(result["cells"], 4)
+        self.assertEqual(result["runs"]["a"]["matched"], 3)
+        self.assertEqual(result["runs"]["b"]["matched"], 2)
+        self.assertEqual([(c["text"], c["motif"]) for c in result["matches_neither"]], [("Ru2", 12)])
+
     def test_classify_members_before_out(self):
         self.assertEqual(a.classify_mfinder_file("Ru1_mfinder_members_OUT.txt"), "members")
         self.assertEqual(a.classify_mfinder_file("Ru1_mfinder_stats_OUT.txt"), "out")

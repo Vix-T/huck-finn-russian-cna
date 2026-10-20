@@ -603,7 +603,30 @@ random-network means, SDs and therefore Z-scores differ, and runtimes and dates 
 
 ### Comparison with Figure 9 of `Final Report 3.pdf`
 
-**Not done.** Figure 9 is an image, and the Read tool cannot render PDF pages in this environment (`pdftoppm` from poppler is not installed). The values have not been compared yet.
+Figure values: `docs/audit/report3_fig9_zscores.csv` (raw Z-scores read off the figure by the project owner).
+Cells compared after rounding both sides to 2 decimals.
+
+| Run | Cells matching | Cells not matching |
+|---|---|---|
+| input_OUT | 65 / 65 | 0 |
+| stats_OUT | 2 / 65 | 63 |
+
+Cells matching neither run: 0.
+
+### Network size per text (old input files)
+
+Ranked by edge count. Edges are distinct directed word pairs (weights not summed);
+weighted total = sum of the weight column.
+
+| Rank | Text | Label | Nodes | Edges | Edges per node | Weighted total |
+|---|---|---|---|---|---|---|
+| 1 | Ru1 | Ru-1911-Engelgardt | 9822 | 67577 | 6.88 | 114962 |
+| 2 | Ru5 | Ru-1960-Daruzes | 7335 | 51216 | 6.98 | 92108 |
+| 3 | Ru4 | Ru-1949-Braude | 7634 | 49719 | 6.51 | 91533 |
+| 4 | Ru3 | Ru-1933-Chukovsky-(Ed.) | 6665 | 40160 | 6.03 | 62997 |
+| 5 | Ru2 | Ru-1926-Anon | 5836 | 31254 | 5.36 | 47758 |
+
+Final Report 3 says Braude's (Ru4) Z-scores are larger because its network "contains more connections overall". By edge count Ru4 ranks 3 of 5; the largest network is Ru1 (Ru-1911-Engelgardt).
 
 ### MEMBERS files: members per motif (cap 1000)
 
