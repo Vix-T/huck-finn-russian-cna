@@ -23,7 +23,9 @@ the stages that follow, and each stage will report its old and new values.
 **The motif audit** confirms that Figure 9 comes from one specific mfinder run: all 65 values match.
 It also corrects four statements in the article:
 
-- A repeat run with the same settings changes Z-scores by up to 1.5.
+- The archived outputs contain two mfinder runs from 2025 on identical input networks and settings.
+  Their Z-scores differ by up to 1.52 for the same motif and text, which reflects run-to-run
+  randomization noise.
 - Braude's network is not the largest, so network size does not explain its large Z-scores.
 - mfinder does not use edge weights.
 - mfinder's motif member lists are partial samples. It does not erase them.
@@ -43,7 +45,7 @@ These need wording changes in the Data Pipeline section, §3.4.1 and §3.5. The 
 | Data Audit and Text Preparation | Dashes, quotation marks and ё normalized | Wording | Data Pipeline |
 | Data Audit and Text Preparation | Old cleaning step deleted ё and fused hyphenated words; replaced | Wording | Data Pipeline ("Distinct Full Datasets") |
 | Audit of Previous Motif Results | Figure 9 traced to one mfinder run (65 of 65 values match) | None | §3.4.1, Figure 9 |
-| Audit of Previous Motif Results | A repeat mfinder run changes Z-scores by up to 1.52 | Wording | §3.4.1 |
+| Audit of Previous Motif Results | Two archived 2025 mfinder runs with identical inputs and settings differ by up to 1.52 in Z | Wording | §3.4.1 |
 | Audit of Previous Motif Results | Braude's network ranks 3rd of 5 by edges; the "more connections" explanation is withdrawn | Wording | §3.4.1 (Figure 9 discussion) |
 | Audit of Previous Motif Results | mfinder ignores edge weights | Wording | Data Pipeline; §3.4.1 |
 | Audit of Previous Motif Results | Motif member lists are partial samples from a different run | Wording | §3.5 |
@@ -273,9 +275,9 @@ is reported in Section 10.
 
 **What changed.** Nothing in the values. We identified which mfinder output produced Figure 9.
 
-**Why.** The archived repository holds two mfinder outputs per translation (`*_input_OUT.txt` and
-`*_stats_OUT.txt`). They come from two separate runs on the same input networks, at different dates,
-with different random networks.
+**Why.** The archived outputs contain two mfinder runs from 2025 on identical input networks and
+settings (100 randomizations): the run behind Figure 9 (`*_input_OUT.txt`, Aug–Oct 2025) and a second
+run (`*_stats_OUT.txt`, Oct 23–25, 2025). Each run drew its own random networks.
 
 **Effect.** We compared all 65 values in Figure 9 (13 motifs × 5 translations) with both runs, after
 rounding to two decimals:
@@ -292,20 +294,23 @@ Figure 9 is the `input_OUT` run.
 ### 5.2 Run-to-run variation of Z-scores
 
 **What changed.** Old: the article presents the Z-scores as fixed values. New: we report that they
-come from a single run of mfinder with 100 random networks and vary from run to run.
+come from a single run of mfinder with 100 random networks and that the archived outputs show how
+much they vary between runs. No new mfinder run was made for this section.
 
-**Why.** mfinder estimates each Z-score from randomized networks³, so a repeat run with the same
-settings gives different values. The two archived runs used identical networks and settings (3-node
-motifs, 100 random networks).
+**Why.** mfinder estimates each Z-score from randomized networks³, so runs with the same input and
+settings give different values. The archived outputs contain two mfinder runs from 2025 on identical
+input networks and settings (3-node motifs, 100 randomizations): the run behind Figure 9
+(`_input_OUT`, Aug–Oct 2025) and a second run (`_stats_OUT`, Oct 23–25, 2025). Their Z-scores differ
+by up to 1.52 for the same motif and text, which reflects run-to-run randomization noise.
 
-**Effect.** Largest absolute difference between the two runs, over the 13 motifs:
+**Effect.** Largest absolute difference between the two archived 2025 runs, over the 13 motifs:
 
 | | Ru-1911 | Ru-1926 | Ru-1933 | Ru-1949 | Ru-1960 |
 |---|---|---|---|---|---|
 | max \|ΔZ\| | 1.46 | 0.43 | 1.41 | 1.27 | 1.52 |
 
-The figure stars a value when |Z| > 2.0. Exactly one cell changes status between the two runs:
-Ru-1949, motif 110 (Z = 1.82 in Figure 9, 2.07 in the other run).
+The figure stars a value when |Z| > 2.0. Exactly one cell changes status between the two archived
+runs: Ru-1949, motif 110 (Z = 1.82 in Figure 9, 2.07 in the `_stats_OUT` run).
 
 **Impact level: Wording.**
 
@@ -314,8 +319,9 @@ exact node, edge, and degree counts of the original text but randomly shuffles t
 connections between words." Add after it:
 
 > The Z-scores in Figures 9–11 come from a single mfinder run with 100 random networks. Because the
-> random networks differ between runs, so do the Z-scores: a second run with identical settings
-> changed individual values by up to 1.5.
+> random networks differ between runs, so do the Z-scores: a second run made in 2025 on the same
+> networks with identical settings gave values that differ by up to 1.5 for the same motif and
+> translation.
 
 The Figure 9 discussion now says: "This step remains necessary however, as it's part of calculating
 the raw z-scores with a 95% confidence interval which tells us which outcomes are statistically
