@@ -169,3 +169,10 @@ verbforms = ["Fin", "Inf", "Part", "Conv"]
 verbform_upos = ["VERB", "AUX"]       # tokens counted in the VerbForm breakdown
 disagreement_top_n = 10               # most common Stanza/spaCy UPOS disagreement pairs per text
 figure_dpi = 300
+# Paragraph-level bootstrap: paragraphs resampled with replacement; percentile confidence intervals.
+# One draw of paragraph indices per text, shared by both taggers; generator numpy default_rng([seed, text index]).
+bootstrap_resamples = 1000
+bootstrap_ci = 0.95
+bootstrap_seed = 20261022
+compare_pair = ["Ru4", "Ru5"]          # texts whose NOUN:VERB intervals are compared (Braude, Daruzes)
+trend_endpoints = ["Ru1", "Ru5"]       # first and last translation for the verb-form trend

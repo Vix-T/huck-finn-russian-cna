@@ -38,8 +38,10 @@ is the only one to rank verbs above nouns (Figure 6). With every word tagged in 
 kept, and two independent taggers, Daruzes does rank verbs above nouns, but so do the 1926, 1933 and
 1949 translations. The 1911 Engel'gardt translation is the only one in which nouns outnumber
 (lexical) verbs; if the auxiliary «быть» is counted as a verb, verbs lead in all five. Daruzes has
-the lowest noun-to-verb ratio of the five (0.81), with Braude next (0.85). Figure 6 is
-replaced, and §3.2.2, the Executive Summary and the Discussion need revised text.
+the lowest noun-to-verb ratio of the five (0.81), with Braude next (0.85), but paragraph-bootstrap
+95% confidence intervals show the two cannot be told apart. The shift from 1911 to 1960 towards
+finite verbs and away from participles and verbal adverbs holds well outside the intervals. Figure 6
+is replaced, and §3.2.2, the Executive Summary and the Discussion need revised text.
 
 ### Changes at a glance
 
@@ -59,6 +61,7 @@ replaced, and §3.2.2, the Executive Summary and the Discussion need revised tex
 | Audit of Previous Motif Results | Motif member lists are partial samples from a different run | Wording | §3.5 |
 | Tokenization and Tagging | POS tagging: pymorphy2 on lemmas without stop words → Stanza in context on the full text, cross-checked with spaCy | Finding | §3.2.2, Figure 6; Executive Summary; Discussion |
 | Tokenization and Tagging | Verbs outrank nouns in Ru-1926, Ru-1933, Ru-1949 and Ru-1960; the Daruzes "inversion" is not unique | Finding | §3.2.2, Figure 6; Executive Summary; Discussion |
+| Tokenization and Tagging | Bootstrap 95% CIs: Daruzes and Braude not distinguishable on NOUN : VERB; verb lead in Ru-1926 and Ru-1933 not established under spaCy; 1911→1960 verb-form trend holds | Finding | §3.2.2; Executive Summary; Discussion |
 | Tokenization and Tagging | Hyphenated words (что-то, мало-помалу) kept as single tokens | None | — |
 
 ---
@@ -488,14 +491,16 @@ New ranks and proportions of word tokens (stop words kept):
 
 In UD, «быть» used as a copula or auxiliary is tagged AUX, not VERB. Counting AUX with VERB lowers
 every ratio (Stanza: 0.965, 0.860, 0.874, 0.771, 0.750; spaCy: 0.983, 0.885, 0.900, 0.790, 0.782).
-The order of the five translations is unchanged, but Ru-1911 then also has more verbs than nouns, so
-with auxiliaries included verbs outnumber nouns in every translation.
+The order of the five translations is unchanged, but Ru-1911 then also has more verbs than nouns
+(Stanza; under spaCy its interval, 0.961–1.005, includes parity), so with auxiliaries included verbs
+outnumber nouns in every translation.
 
 **Does Daruzes still rank verbs above nouns?** Yes, under both taggers. But the article's finding
 was that Daruzes is the *only* translation to do so, and that no longer holds. Verbs rank first and
 nouns second in all four translations from 1926 to 1960. The 1911 Engel'gardt translation is the
 only one with nouns first, and only when lexical verbs (VERB) are counted without the auxiliary
-(AUX). Daruzes has the most verb-heavy profile of the five on either count, with Braude close behind.
+(AUX). Daruzes has the most verb-heavy profile of the five on either count, but it is not
+distinguishable from Braude (see Uncertainty below).
 
 Verb forms (Stanza; share of VERB and AUX tokens):
 
@@ -508,6 +513,41 @@ Verb forms (Stanza; share of VERB and AUX tokens):
 | Ru-1960-Daruzes | 77.5% | 14.9% | 1.8% | 1.4% |
 
 spaCy gives the same ordering, within 1.1 percentage points of each value.
+
+**Uncertainty.** We resampled paragraphs with replacement (1,000 resamples, seed 20261022, the same
+resampled paragraphs for both taggers) and report percentile 95% confidence intervals. Each cell gives
+the point estimate and the interval. Verb-form shares are shares of VERB and AUX tokens.
+
+| Translation | Tagger | NOUN : VERB | NOUN : (VERB + AUX) | Finite | Participle | Verbal adverb |
+|---|---|---|---|---|---|---|
+| Ru-1911-Engelgardt | Stanza | 1.048 [1.026, 1.070] | 0.965 [0.945, 0.986] | 64.6% [64.0, 65.2] | 6.2% [5.8, 6.7] | 5.3% [5.0, 5.7] |
+| Ru-1911-Engelgardt | spaCy | 1.071 [1.048, 1.094] | 0.983 [0.961, 1.005] | 65.7% [65.1, 66.3] | 6.6% [6.1, 7.0] | 5.2% [4.8, 5.5] |
+| Ru-1926-Anon | Stanza | 0.949 [0.919, 0.977] | 0.860 [0.834, 0.887] | 71.2% [70.2, 72.2] | 5.1% [4.5, 5.7] | 3.3% [2.9, 3.8] |
+| Ru-1926-Anon | spaCy | 0.979 [0.949, 1.011] | 0.885 [0.857, 0.912] | 71.7% [70.8, 72.7] | 5.2% [4.6, 5.7] | 3.2% [2.8, 3.6] |
+| Ru-1933-Chukovsky-(Ed.) | Stanza | 0.954 [0.928, 0.980] | 0.874 [0.851, 0.898] | 72.7% [71.9, 73.6] | 4.2% [3.8, 4.6] | 3.1% [2.8, 3.5] |
+| Ru-1933-Chukovsky-(Ed.) | spaCy | 0.986 [0.959, 1.013] | 0.900 [0.876, 0.924] | 73.2% [72.4, 74.0] | 4.3% [4.0, 4.8] | 3.1% [2.7, 3.4] |
+| Ru-1949-Braude | Stanza | 0.846 [0.824, 0.871] | 0.771 [0.750, 0.792] | 76.0% [75.3, 76.8] | 2.8% [2.4, 3.2] | 1.4% [1.2, 1.6] |
+| Ru-1949-Braude | spaCy | 0.871 [0.847, 0.896] | 0.790 [0.769, 0.812] | 76.8% [76.0, 77.5] | 2.8% [2.5, 3.1] | 1.5% [1.3, 1.7] |
+| Ru-1960-Daruzes | Stanza | 0.811 [0.787, 0.834] | 0.750 [0.729, 0.772] | 77.5% [76.8, 78.2] | 1.8% [1.5, 2.1] | 1.4% [1.2, 1.6] |
+| Ru-1960-Daruzes | spaCy | 0.847 [0.824, 0.871] | 0.782 [0.761, 0.803] | 78.5% [77.9, 79.1] | 2.0% [1.7, 2.3] | 1.5% [1.3, 1.7] |
+
+What the intervals show, taking non-overlapping intervals as the criterion:
+
+- **Daruzes versus Braude: not distinguishable.** Their intervals overlap on both ratios under both
+  taggers (e.g. Stanza NOUN : VERB 0.787–0.834 versus 0.824–0.871). Daruzes's lower point estimate
+  is within resampling noise.
+- **Engel'gardt's noun lead is clear.** Its NOUN : VERB interval lies above 1 under both taggers.
+- **The verb lead of the abridged translations depends on the tagger.** Under Stanza the NOUN : VERB
+  intervals of Ru-1926 and Ru-1933 lie below 1. Under spaCy they include 1 (0.949–1.011 and
+  0.959–1.013), so verbs and nouns are not distinguishable there. For Braude and Daruzes the intervals
+  lie below 1 under both taggers.
+- **The 1911→1960 verb-form trend holds outside the intervals.** For finite verbs, participles and
+  verbal adverbs, the Ru-1911 and Ru-1960 intervals are far apart under both taggers, and every
+  consecutive step is separated except two. Ru-1926 and Ru-1933 overlap on all three shares, and
+  Braude and Daruzes overlap on verbal adverbs.
+
+Non-overlap of two 95% intervals is a conservative test: intervals that overlap slightly can still
+differ at the 5% level. Where we say "not distinguishable" we mean by this criterion.
 
 The two taggers agree on 93.5–95.1% of word tokens in every translation. The most common
 disagreements are determiners versus adjectives or pronouns (mostly «который», «сам», «самый»,
@@ -541,12 +581,14 @@ translations …" with:
 > translations differ in length, we compare ranks and proportions rather than raw counts (Figure 6).
 >
 > The 1911 Engel'gardt translation is the only one in which nouns outnumber verbs (ratio of nouns to
-> verbs 1.05; counting the auxiliary «быть» as a verb, verbs slightly outnumber nouns here too). In the
-> four later translations verbs rank first and nouns second, and the ratio falls
-> from 0.95 in the abridged 1926 and 1933 translations to 0.85 in Braude and 0.81 in Daruzes. Both
-> taggers give the same ranking. The later translations also rely more on finite verb forms (from
-> 65% of verbs in Engel'gardt to 78% in Daruzes) and less on participles (6.2% to 1.8%) and verbal
-> adverbs (5.3% to 1.4%).
+> verbs 1.05, 95% bootstrap interval 1.03–1.07; counting the auxiliary «быть» as a verb, verbs
+> slightly outnumber nouns here too). In the four later translations verbs rank first and nouns
+> second. The ratio is close to parity in the abridged 1926 and 1933 translations (0.95; with the
+> second tagger the intervals include 1) and lowest in Braude (0.85) and Daruzes (0.81), whose
+> intervals overlap, so the two cannot be distinguished. The later translations also rely more on
+> finite verb forms (from 65% of verbs in Engel'gardt to 78% in Daruzes) and less on participles
+> (6.2% to 1.8%) and verbal adverbs (5.3% to 1.4%); these differences lie well outside the
+> bootstrap intervals under both taggers.
 
 **Figure 6 caption.** Replace with:
 
@@ -557,7 +599,7 @@ translations …" with:
 grammatical hierarchy by prioritizing verbs over nouns" with:
 
 > the 1911 Engel'gardt translation is the only one in which nouns outnumber lexical verbs, while the
-> 1960 Daruzes translation has the highest proportion of verbs to nouns
+> 1949 Braude and 1960 Daruzes translations have the highest proportions of verbs to nouns
 
 **Discussion & Recommendations.** Replace "The most notable divergence occurs in the 1960 Daruzes
 text. By statistically inverting the standard noun verb rankings and creating a more dynamic if less
@@ -568,7 +610,7 @@ lexically rich translation, Daruzes alters the topology of the novel." with:
 > translations.
 
 In the final paragraph, replace "the 1960 Daruzes translation is the most grammatically dynamic"
-with "the 1960 Daruzes translation has the highest proportion of verbs to nouns". In the table of
+with "the 1949 Braude and 1960 Daruzes translations have the highest proportions of verbs to nouns". In the table of
 visualizations, the Part-of-Speech Heatmap entry ("The hierarchical priority of grammatical forms")
 can stay.
 

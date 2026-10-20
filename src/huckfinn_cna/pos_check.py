@@ -67,6 +67,61 @@ def agreement(rows: list[dict]) -> tuple[float, Counter]:
     return (1 - sum(pairs.values()) / len(rows) if rows else 0.0), pairs
 
 
+# --- Bootstrap ----------------------------------------------------------------------
+
+# Per-paragraph count columns and the statistics computed from summed counts.
+COUNT_COLUMNS = ["NOUN", "VERB", "AUX", "verbs", "Fin", "Part", "Conv"]
+STATISTICS = {
+    "noun_verb": ("NOUN : VERB", lambda c: c["NOUN"] / c["VERB"]),
+    "noun_verb_aux": ("NOUN : (VERB + AUX)", lambda c: c["NOUN"] / (c["VERB"] + c["AUX"])),
+    "fin": ("Finite share of verbs", lambda c: c["Fin"] / c["verbs"]),
+    "part": ("Participle share of verbs", lambda c: c["Part"] / c["verbs"]),
+    "conv": ("Verbal adverb (Conv) share of verbs", lambda c: c["Conv"] / c["verbs"]),
+}
+
+
+def paragraph_counts(rows: list[dict], n_paragraphs: int, upos_col: str, vf_col: str, verb_upos: set[str]):
+    """Array (paragraphs × COUNT_COLUMNS) of counts; 'verbs' = tokens tagged in verb_upos."""
+    import numpy as np
+    counts = np.zeros((n_paragraphs, len(COUNT_COLUMNS)), dtype=np.int64)
+    col = {name: i for i, name in enumerate(COUNT_COLUMNS)}
+    for r in rows:
+        i, upos = int(r["para_id"]) - 1, r[upos_col]
+        if upos in ("NOUN", "VERB", "AUX"):
+            counts[i, col[upos]] += 1
+        if upos in verb_upos:
+            counts[i, col["verbs"]] += 1
+            if r[vf_col] in ("Fin", "Part", "Conv"):
+                counts[i, col[r[vf_col]]] += 1
+    return counts
+
+
+def statistics(sums) -> dict[str, float]:
+    """STATISTICS from summed counts (a vector in COUNT_COLUMNS order)."""
+    c = dict(zip(COUNT_COLUMNS, sums))
+    return {key: fn(c) for key, (_, fn) in STATISTICS.items()}
+
+
+def bootstrap_indices(n_paragraphs: int, resamples: int, seed: int, text_index: int):
+    """Resampled paragraph indices (resamples × n_paragraphs), reproducible per text."""
+    import numpy as np
+    rng = np.random.default_rng([seed, text_index])
+    return rng.integers(0, n_paragraphs, size=(resamples, n_paragraphs))
+
+
+def bootstrap_ci(counts, indices, level: float) -> dict[str, tuple[float, float]]:
+    """Percentile interval of each statistic over the resampled paragraph sets."""
+    import numpy as np
+    sums = counts[indices].sum(axis=1)                      # resamples × COUNT_COLUMNS
+    c = {name: sums[:, i].astype(float) for i, name in enumerate(COUNT_COLUMNS)}
+    alpha = (1 - level) / 2
+    return {key: tuple(np.quantile(fn(c), [alpha, 1 - alpha])) for key, (_, fn) in STATISTICS.items()}
+
+
+def overlap(a: tuple[float, float], b: tuple[float, float]) -> bool:
+    return a[0] <= b[1] and b[0] <= a[1]
+
+
 def heatmap_tags(per_text: dict[str, Counter], n: int) -> list[str]:
     """The n tags most frequent over all texts (summed counts), as in the old Figure 6."""
     total = Counter()
@@ -92,17 +147,21 @@ def build(config: dict) -> dict:
     audit = {Path(t["file"]).stem: t for t in json.loads(repo_path(config, "audit_json").read_text(encoding="utf-8"))["texts"]}
     tagged_dir, clean_dir = repo_path(config, "tagged_dir"), repo_path(config, "clean_dir")
     data = {}
-    for text_id in texts:
+    for text_index, text_id in enumerate(texts):
         rows = read_tagged(tagged_dir / f"{text_id}.tsv")
         meta = json.loads((tagged_dir / f"{text_id}.meta.json").read_text(encoding="utf-8"))
         words = word_rows(rows)
         entry = {"meta": meta, "audit": audit[text_id]["lengths"], "n_words": len(words),
                  "clean_words": word_stats((clean_dir / f"{text_id}.txt").read_text(encoding="utf-8"))["tokens"]}
+        indices = bootstrap_indices(meta["paragraphs"], pc["bootstrap_resamples"], pc["bootstrap_seed"], text_index)
         for tagger, (upos_col, vf_col) in TAGGERS.items():
             counts = upos_counts(words, upos_col)
+            para = paragraph_counts(words, meta["paragraphs"], upos_col, vf_col, set(pc["verbform_upos"]))
             entry[tagger] = {"counts": counts, "ranks": ranks(counts), "order": top_order(counts, pc["top_n"]),
                              **noun_verb_ratios(counts),
-                             "verbforms": verbform_counts(words, upos_col, vf_col, set(pc["verbform_upos"]))}
+                             "verbforms": verbform_counts(words, upos_col, vf_col, set(pc["verbform_upos"])),
+                             "point": statistics(para.sum(axis=0)),
+                             "ci": bootstrap_ci(para, indices, pc["bootstrap_ci"])}
         entry["agreement"], entry["disagreements"] = agreement(words)
         data[text_id] = entry
     return data
@@ -162,6 +221,8 @@ def render_report(config: dict, data: dict) -> str:
             other = sum(v for k, v in vf.items() if k and k not in forms)
             L.append(f"| {t} | {n} | " + " | ".join(pct(vf[f], n) for f in forms) + f" | {pct(other, n)} | {pct(vf[''], n)} |")
 
+    L += render_bootstrap(config, data)
+
     L += ["", "## Stanza–spaCy agreement on UPOS (word tokens)", "",
           "| Text | Word tokens | Same UPOS | Agreement |", "|---|---|---|---|"]
     for t in ids:
@@ -175,6 +236,58 @@ def render_report(config: dict, data: dict) -> str:
             L.append(f"| {a} / {b} | {k} | {pct(k, n)} |")
         L.append("")
     return "\n".join(L)
+
+
+def fmt_stat(key: str, x: float) -> str:
+    return f"{100 * x:.1f}%" if key in ("fin", "part", "conv") else f"{x:.3f}"
+
+
+def fmt_ci(key: str, ci: tuple[float, float]) -> str:
+    return f"[{fmt_stat(key, ci[0])}, {fmt_stat(key, ci[1])}]"
+
+
+def comparisons(config: dict, data: dict) -> list[str]:
+    """Plain statements: the compare_pair ratio intervals and the verb-form trend endpoints."""
+    pc, labels = config["pos_check"], config["corpus"]["labels"]
+    a, b = pc["compare_pair"]
+    first, last = pc["trend_endpoints"]
+    ids = list(data)
+    out = []
+    for tagger in TAGGERS:
+        for key in ("noun_verb", "noun_verb_aux"):
+            ca, cb = data[a][tagger]["ci"][key], data[b][tagger]["ci"][key]
+            verdict = "overlap: not distinguishable" if overlap(ca, cb) else "do not overlap: distinguishable"
+            out.append(f"- {tagger}, {STATISTICS[key][0]}: {labels[b]} {fmt_ci(key, cb)} vs {labels[a]} "
+                       f"{fmt_ci(key, ca)} — intervals {verdict}.")
+    for tagger in TAGGERS:
+        for key in ("fin", "part", "conv"):
+            cf, cl = data[first][tagger]["ci"][key], data[last][tagger]["ci"][key]
+            ends = "do not overlap" if not overlap(cf, cl) else "overlap"
+            adjacent = [f"{x}–{y}" for x, y in zip(ids, ids[1:])
+                        if overlap(data[x][tagger]["ci"][key], data[y][tagger]["ci"][key])]
+            out.append(f"- {tagger}, {STATISTICS[key][0]}: {first} {fmt_ci(key, cf)} vs {last} {fmt_ci(key, cl)} — "
+                       f"endpoint intervals {ends}; adjacent pairs with overlapping intervals: "
+                       f"{', '.join(adjacent) if adjacent else 'none'}.")
+    return out
+
+
+def render_bootstrap(config: dict, data: dict) -> list[str]:
+    pc, ids = config["pos_check"], list(data)
+    L = ["", f"## Bootstrap {100 * pc['bootstrap_ci']:.0f}% confidence intervals", "",
+         f"Paragraphs resampled with replacement, {pc['bootstrap_resamples']:,} resamples, percentile intervals, "
+         f"seed {pc['bootstrap_seed']}",
+         "(numpy `default_rng([seed, text index])`; the same resampled paragraphs for both taggers). Verb-form "
+         "shares are", f"shares of {' and '.join(pc['verbform_upos'])} tokens. Point estimate, then interval.", ""]
+    for tagger in TAGGERS:
+        L += [f"### {tagger}", "",
+              "| Text | " + " | ".join(STATISTICS[k][0] for k in STATISTICS) + " |", "|---|" + "---|" * len(STATISTICS)]
+        for t in ids:
+            e = data[t][tagger]
+            L.append(f"| {t} | " + " | ".join(f"{fmt_stat(k, e['point'][k])} {fmt_ci(k, e['ci'][k])}" for k in STATISTICS)
+                     + " |")
+        L.append("")
+    L += ["### Comparisons (non-overlapping intervals)", ""] + comparisons(config, data)
+    return L
 
 
 # --- Figure ------------------------------------------------------------------------

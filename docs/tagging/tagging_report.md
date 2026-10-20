@@ -126,6 +126,45 @@ Share of tokens tagged VERB or AUX; *none* = no VerbForm feature.
 | Ru4 | 19440 | 76.8% | 16.5% | 2.8% | 1.5% | 0.0% | 2.5% |
 | Ru5 | 19539 | 78.5% | 15.6% | 2.0% | 1.5% | 0.0% | 2.4% |
 
+## Bootstrap 95% confidence intervals
+
+Paragraphs resampled with replacement, 1,000 resamples, percentile intervals, seed 20261022
+(numpy `default_rng([seed, text index])`; the same resampled paragraphs for both taggers). Verb-form shares are
+shares of VERB and AUX tokens. Point estimate, then interval.
+
+### Stanza
+
+| Text | NOUN : VERB | NOUN : (VERB + AUX) | Finite share of verbs | Participle share of verbs | Verbal adverb (Conv) share of verbs |
+|---|---|---|---|---|---|
+| Ru1 | 1.048 [1.026, 1.070] | 0.965 [0.945, 0.986] | 64.6% [64.0%, 65.2%] | 6.2% [5.8%, 6.7%] | 5.3% [5.0%, 5.7%] |
+| Ru2 | 0.949 [0.919, 0.977] | 0.860 [0.834, 0.887] | 71.2% [70.2%, 72.2%] | 5.1% [4.5%, 5.7%] | 3.3% [2.9%, 3.8%] |
+| Ru3 | 0.954 [0.928, 0.980] | 0.874 [0.851, 0.898] | 72.7% [71.9%, 73.6%] | 4.2% [3.8%, 4.6%] | 3.1% [2.8%, 3.5%] |
+| Ru4 | 0.846 [0.824, 0.871] | 0.771 [0.750, 0.792] | 76.0% [75.3%, 76.8%] | 2.8% [2.4%, 3.2%] | 1.4% [1.2%, 1.6%] |
+| Ru5 | 0.811 [0.787, 0.834] | 0.750 [0.729, 0.772] | 77.5% [76.8%, 78.2%] | 1.8% [1.5%, 2.1%] | 1.4% [1.2%, 1.6%] |
+
+### spaCy
+
+| Text | NOUN : VERB | NOUN : (VERB + AUX) | Finite share of verbs | Participle share of verbs | Verbal adverb (Conv) share of verbs |
+|---|---|---|---|---|---|
+| Ru1 | 1.071 [1.048, 1.094] | 0.983 [0.961, 1.005] | 65.7% [65.1%, 66.3%] | 6.6% [6.1%, 7.0%] | 5.2% [4.8%, 5.5%] |
+| Ru2 | 0.979 [0.949, 1.011] | 0.885 [0.857, 0.912] | 71.7% [70.8%, 72.7%] | 5.2% [4.6%, 5.7%] | 3.2% [2.8%, 3.6%] |
+| Ru3 | 0.986 [0.959, 1.013] | 0.900 [0.876, 0.924] | 73.2% [72.4%, 74.0%] | 4.3% [4.0%, 4.8%] | 3.1% [2.7%, 3.4%] |
+| Ru4 | 0.871 [0.847, 0.896] | 0.790 [0.769, 0.812] | 76.8% [76.0%, 77.5%] | 2.8% [2.5%, 3.1%] | 1.5% [1.3%, 1.7%] |
+| Ru5 | 0.847 [0.824, 0.871] | 0.782 [0.761, 0.803] | 78.5% [77.9%, 79.1%] | 2.0% [1.7%, 2.3%] | 1.5% [1.3%, 1.7%] |
+
+### Comparisons (non-overlapping intervals)
+
+- Stanza, NOUN : VERB: Ru-1960-Daruzes [0.787, 0.834] vs Ru-1949-Braude [0.824, 0.871] — intervals overlap: not distinguishable.
+- Stanza, NOUN : (VERB + AUX): Ru-1960-Daruzes [0.729, 0.772] vs Ru-1949-Braude [0.750, 0.792] — intervals overlap: not distinguishable.
+- spaCy, NOUN : VERB: Ru-1960-Daruzes [0.824, 0.871] vs Ru-1949-Braude [0.847, 0.896] — intervals overlap: not distinguishable.
+- spaCy, NOUN : (VERB + AUX): Ru-1960-Daruzes [0.761, 0.803] vs Ru-1949-Braude [0.769, 0.812] — intervals overlap: not distinguishable.
+- Stanza, Finite share of verbs: Ru1 [64.0%, 65.2%] vs Ru5 [76.8%, 78.2%] — endpoint intervals do not overlap; adjacent pairs with overlapping intervals: Ru2–Ru3.
+- Stanza, Participle share of verbs: Ru1 [5.8%, 6.7%] vs Ru5 [1.5%, 2.1%] — endpoint intervals do not overlap; adjacent pairs with overlapping intervals: Ru2–Ru3.
+- Stanza, Verbal adverb (Conv) share of verbs: Ru1 [5.0%, 5.7%] vs Ru5 [1.2%, 1.6%] — endpoint intervals do not overlap; adjacent pairs with overlapping intervals: Ru2–Ru3, Ru4–Ru5.
+- spaCy, Finite share of verbs: Ru1 [65.1%, 66.3%] vs Ru5 [77.9%, 79.1%] — endpoint intervals do not overlap; adjacent pairs with overlapping intervals: Ru2–Ru3.
+- spaCy, Participle share of verbs: Ru1 [6.1%, 7.0%] vs Ru5 [1.7%, 2.3%] — endpoint intervals do not overlap; adjacent pairs with overlapping intervals: Ru2–Ru3.
+- spaCy, Verbal adverb (Conv) share of verbs: Ru1 [4.8%, 5.5%] vs Ru5 [1.3%, 1.7%] — endpoint intervals do not overlap; adjacent pairs with overlapping intervals: Ru2–Ru3, Ru4–Ru5.
+
 ## Stanza–spaCy agreement on UPOS (word tokens)
 
 | Text | Word tokens | Same UPOS | Agreement |

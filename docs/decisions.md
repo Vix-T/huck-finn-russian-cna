@@ -111,3 +111,9 @@ parameters in config `[tag]` and `[pos_check]`.
 21. **Running uv inside the Claude Code sandbox.** Because `ru_core_news_lg` is a direct-URL dependency,
     plain `uv run` re-checks its URL on github.com; inside the sandbox use `uv run --frozen`, which
     installs from `uv.lock` without network access.
+22. **Uncertainty for the POS re-check** (2026-10-20; config `[pos_check]`). Paragraph-level bootstrap:
+    paragraphs resampled with replacement, 1,000 resamples, percentile 95% intervals, seed **20261022**
+    (numpy `default_rng([seed, text index])`, one draw per text shared by both taggers). Intervals for
+    NOUN : VERB, NOUN : (VERB + AUX), and the finite, participle and verbal-adverb (Conv) shares of
+    VERB and AUX tokens. Two values are called distinguishable when their intervals do not overlap
+    (conservative). Compared: Braude vs Daruzes (`compare_pair`) and Ru1 vs Ru5 (`trend_endpoints`).
