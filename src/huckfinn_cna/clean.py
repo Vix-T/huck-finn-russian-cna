@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import random
 import re
@@ -46,6 +47,7 @@ RULES = {
     "g": "punctuation",
     "h": "broken hyphenation rejoined",
     "i": "split words joined",
+    "i2": "split words joined by attestation (only if enabled)",
     "j": "ё to е",
     "k": "manual corrections",
 }
@@ -74,6 +76,7 @@ class Result:
     removed_blocks: list[dict] = field(default_factory=list)
     brackets_kept: list[dict] = field(default_factory=list)
     split_candidates: list[dict] = field(default_factory=list)
+    attested_joins: list[dict] = field(default_factory=list)
 
 
 class CleaningError(Exception):
@@ -215,7 +218,9 @@ def replace_standalone(line: Line, mapping: dict[str, str], changes: list[Change
 # --- g. Punctuation --------------------------------------------------------
 
 
-def normalize_punctuation(line: Line, cfg: dict, changes: list[Change], ctx: int) -> None:
+def normalize_punctuation(line: Line, cfg: dict, changes: list[Change], ctx: int,
+                          rejoin: list[re.Pattern] = ()) -> None:
+    """Rule g. A spaced hyphen that a rule h pattern in `rejoin` would rejoin is left for rule h."""
     dash = cfg["dash"]
 
     def spaced_dash(m):
@@ -226,7 +231,8 @@ def normalize_punctuation(line: Line, cfg: dict, changes: list[Change], ctx: int
     sub_logged(double, spaced_dash, line, "g", changes, ctx)
 
     spaced = re.compile(rf"(?<=\S) +(?:{alternation(cfg['spaced_dashes'])}) +(?=\S)")
-    sub_logged(spaced, lambda m: f" {dash} ", line, "g", changes, ctx)
+    sub_logged(spaced, lambda m: None if m.group(0).strip() == "-" and is_rejoinable(m, rejoin) else f" {dash} ",
+               line, "g", changes, ctx)
 
     quotes = re.compile(f"[{''.join(re.escape(q) for q in cfg['quote_chars'])}]")
     opening_after = set(cfg["opening_after"])
@@ -250,15 +256,37 @@ def normalize_punctuation(line: Line, cfg: dict, changes: list[Change], ctx: int
 # --- h. Broken hyphenation -------------------------------------------------
 
 
+HYPHEN_GAP = r"(?: +- *| *- +)"  # a hyphen with at least one space next to it
+WORD = rf"[{CYR}]+(?:-[{CYR}]+)*"
+
+
+def word_or_capitalized(words: list[str]) -> str:
+    return alternation(sorted({form for w in words for form in (w, w.capitalize())}))
+
+
+def rejoin_patterns(cfg: dict) -> list[re.Pattern]:
+    """Rule h patterns; each has groups (left, right) that are rejoined as 'left-right'."""
+    end = r"(?![\w-])"
+    patterns = [
+        rf"(?<![\w-])({WORD}){HYPHEN_GAP}({alternation(cfg['particles'])}){end}",
+        rf"(?<![\w-])({word_or_capitalized([cfg['po_word']])}){HYPHEN_GAP}"
+        rf"([{CYR}]+(?:{alternation(cfg['po_suffixes'])})){end}",
+        rf"(?<![\w-])({word_or_capitalized(cfg['prefixes'])}){HYPHEN_GAP}({WORD}){end}",
+    ]
+    patterns += [rf"(?<![\w-])({word_or_capitalized([left])}){HYPHEN_GAP}({re.escape(right)}){end}"
+                 for left, right in cfg["fixed_pairs"]]
+    return [re.compile(p) for p in patterns]
+
+
+def is_rejoinable(m: re.Match, patterns: list[re.Pattern]) -> bool:
+    """True if the spaced hyphen in m sits inside a span that a rule h pattern would rejoin."""
+    return any(hit.start() < m.start() and m.end() <= hit.end()
+               for p in patterns for hit in p.finditer(m.string))
+
+
 def rejoin_hyphenation(line: Line, cfg: dict, changes: list[Change], ctx: int) -> None:
-    gap = r"(?: +- *| *- +)"  # at least one space next to the hyphen
-    particle = re.compile(rf"(?<![\w-])([{CYR}]+(?:-[{CYR}]+)*){gap}({alternation(cfg['particles'])})(?![\w-])")
-    sub_logged(particle, lambda m: f"{m.group(1)}-{m.group(2)}", line, "h", changes, ctx)
-    po = re.escape(cfg["po_word"])
-    po_pattern = re.compile(
-        rf"(?<![\w-])({po}|{po.capitalize()}){gap}([{CYR}]+(?:{alternation(cfg['po_suffixes'])}))(?![\w-])"
-    )
-    sub_logged(po_pattern, lambda m: f"{m.group(1)}-{m.group(2)}", line, "h", changes, ctx)
+    for pattern in rejoin_patterns(cfg):
+        sub_logged(pattern, lambda m: f"{m.group(1)}-{m.group(2)}", line, "h", changes, ctx)
 
 
 # --- i. Split words --------------------------------------------------------
@@ -282,23 +310,93 @@ def adjacent_pairs(text: str):
             yield a, b, a.group(0) + b.group(0)
 
 
-def join_split_words(line: Line, changes: list[Change], candidates: list[dict], ctx: int) -> None:
-    """Join A B -> AB if AB is a dictionary word and A or B is not, repeated until nothing joins.
+def guard_reason(a: str, b: str, guards: dict) -> str | None:
+    """Why the pair A B may never be joined (rules i and i2), or None."""
+    if a.lower() in guards["never_join_after"]:
+        return f"guard: A is {a.lower()!r}"
+    if guards["block_if_second_capitalized"] and b[:1].isupper():
+        return "guard: B capitalized"
+    return None
 
-    Pairs where A, B and AB are all known are not joined; they are recorded as candidates.
+
+BOTH_KNOWN = "both known"
+
+
+def join_split_words(line: Line, changes: list[Change], candidates: list[dict], ctx: int, guards: dict) -> None:
+    """Join A B -> AB if AB is a dictionary word, A or B is not, and no guard applies; repeat until none.
+
+    Pairs not joined although AB is a dictionary word are recorded as candidates, with the reason
+    (all three known, or the guard that blocked the join).
     """
+    def joinable(a, b, ab):
+        return (is_known(ab) and not (is_known(a.group(0)) and is_known(b.group(0)))
+                and guard_reason(a.group(0), b.group(0), guards) is None)
+
     while True:
         text = line.text
-        hit = next(((a, b, ab) for a, b, ab in adjacent_pairs(text)
-                    if is_known(ab) and not (is_known(a.group(0)) and is_known(b.group(0)))), None)
+        hit = next(((a, b, ab) for a, b, ab in adjacent_pairs(text) if joinable(a, b, ab)), None)
         if hit is None:
             break
         a, b, ab = hit
         changes.append(Change("i", line.number, f"{a.group(0)} {b.group(0)}", ab,
                               text[max(0, a.start() - ctx):a.start()], text[b.end():b.end() + ctx]))
         line.text = text[:a.start()] + ab + text[b.end():]
-    candidates += [{"line": line.number, "a": a.group(0), "b": b.group(0), "joined": ab}
-                   for a, b, ab in adjacent_pairs(line.text) if is_known(ab)]
+    for a, b, ab in adjacent_pairs(line.text):
+        if is_known(ab):
+            both = is_known(a.group(0)) and is_known(b.group(0))
+            reason = BOTH_KNOWN if both else guard_reason(a.group(0), b.group(0), guards)
+            candidates.append({"line": line.number, "a": a.group(0), "b": b.group(0), "joined": ab, "reason": reason})
+
+
+# --- i2. Within-text attestation joins -------------------------------------
+
+
+def normalize_form(word: str, yo: dict[str, str]) -> str:
+    """Lowercase with ё folded, so comparisons do not depend on rule j having run."""
+    return word.lower().translate(str.maketrans(yo))
+
+
+def corpus_attestation(results: dict[str, Result], yo: dict[str, str]) -> dict:
+    """Per text: single-token counts and the set of adjacent bare-token pairs (normalized)."""
+    tokens, pairs = {}, {}
+    for text_id, result in results.items():
+        tokens[text_id] = Counter(normalize_form(t, yo) for ln in result.lines for t in BARE_TOKEN_RE.findall(ln.text))
+        pairs[text_id] = {(normalize_form(a.group(0), yo), normalize_form(b.group(0), yo))
+                          for ln in result.lines for a, b, _ in adjacent_pairs(ln.text)}
+    return {"tokens": tokens, "pairs": pairs}
+
+
+def attested_join_count(a: str, b: str, text_id: str, attestation: dict, cfg: dict) -> int | None:
+    """Times AB is attested in the same text if all i2 conditions hold, else None."""
+    yo = cfg["yo"]
+    if guard_reason(a, b, cfg["split_words"]) is not None:
+        return None
+    pair = (normalize_form(a, yo), normalize_form(b, yo))
+    if any(pair in pairs for other, pairs in attestation["pairs"].items() if other != text_id):
+        return None
+    attested = attestation["tokens"][text_id][normalize_form(a + b, yo)]
+    return attested if attested >= cfg["attested_joins"]["min_attested"] else None
+
+
+def apply_attested_joins(result: Result, text_id: str, attestation: dict, cfg: dict, ctx: int) -> None:
+    """Rule i2: one left-to-right pass per line; a joined token is not paired again."""
+    for line in result.lines:
+        text = line.text
+        out, pos = [], 0
+        for a, b, ab in adjacent_pairs(text):
+            if a.start() < pos:
+                continue  # A was consumed by the previous join
+            attested = attested_join_count(a.group(0), b.group(0), text_id, attestation, cfg)
+            if attested is None:
+                continue
+            left, right = text[max(0, a.start() - ctx):a.start()], text[b.end():b.end() + ctx]
+            result.changes.append(Change("i2", line.number, f"{a.group(0)} {b.group(0)}", ab, left, right))
+            result.attested_joins.append({"line": line.number, "a": a.group(0), "b": b.group(0), "ab": ab,
+                                          "attested": attested, "left": left, "right": right})
+            out += [text[pos:a.start()], ab]
+            pos = b.end()
+        if pos:
+            line.text = "".join(out) + text[pos:]
 
 
 # --- j. ё ------------------------------------------------------------------
@@ -340,29 +438,62 @@ def apply_manual_corrections(result: Result, corrections: list[dict], text_id: s
 
 
 def clean_lines(result: Result, cfg: dict) -> None:
-    """Rules c–j on every line, in order."""
+    """Rules c–i on every line, in order."""
     ctx = cfg["log_context_chars"]
+    rejoin = rejoin_patterns(cfg["hyphenation"])
     remove_editorial_notes(result, cfg["editorial_notes"], ctx)
     for line in result.lines:
         normalize_whitespace(line, result.changes, ctx)
         map_lookalikes(line, cfg["latin_lookalikes"], result.changes, ctx)
         replace_standalone(line, cfg["standalone_tokens"], result.changes, ctx)
-        normalize_punctuation(line, cfg["punctuation"], result.changes, ctx)
+        normalize_punctuation(line, cfg["punctuation"], result.changes, ctx, rejoin)
         rejoin_hyphenation(line, cfg["hyphenation"], result.changes, ctx)
-        join_split_words(line, result.changes, result.split_candidates, ctx)
-        replace_yo(line, cfg["yo"], result.changes, ctx)
+        join_split_words(line, result.changes, result.split_candidates, ctx, cfg["split_words"])
 
 
-def clean_text(raw: bytes, text_id: str, cfg: dict, corrections: list[dict] | None = None,
-               front_matter_required: bool = True) -> Result:
-    """All rules a–k for one text. Rules b and k are one-shot (they match the raw text)."""
+def clean_stage1(raw: bytes, text_id: str, cfg: dict, front_matter_required: bool = True) -> Result:
+    """Rules a–i for one text."""
     result = Result(lines=[])
     result.lines = read_lines(raw, cfg, result.changes)
     blocks = [b for b in cfg.get("front_matter", []) if b["text"] == text_id]
     remove_front_matter(result, blocks, front_matter_required)
     clean_lines(result, cfg)
-    apply_manual_corrections(result, corrections or [], text_id, cfg["log_context_chars"])
     return result
+
+
+def clean_stage2(result: Result, text_id: str, cfg: dict, corrections: list[dict],
+                 attestation: dict | None, apply_i2: bool) -> None:
+    """Rule i2 (only if apply_i2; needs corpus attestation), then rules j and k."""
+    ctx = cfg["log_context_chars"]
+    if apply_i2:
+        if attestation is None:
+            raise CleaningError("rule i2 needs corpus attestation; use clean_corpus")
+        apply_attested_joins(result, text_id, attestation, cfg, ctx)
+    for line in result.lines:
+        replace_yo(line, cfg["yo"], result.changes, ctx)
+    apply_manual_corrections(result, corrections, text_id, ctx)
+
+
+def clean_text(raw: bytes, text_id: str, cfg: dict, corrections: list[dict] | None = None,
+               front_matter_required: bool = True) -> Result:
+    """Rules a–k except i2 for a single text (i2 needs the corpus; see clean_corpus).
+
+    Rules b and k are one-shot: they match the raw text.
+    """
+    result = clean_stage1(raw, text_id, cfg, front_matter_required)
+    clean_stage2(result, text_id, cfg, corrections or [], None, apply_i2=False)
+    return result
+
+
+def clean_corpus(stage1: dict[str, Result], cfg: dict, corrections: list[dict], apply_i2: bool) -> dict[str, Result]:
+    """Stage 2 for every text, on deep copies of the stage-1 results."""
+    attestation = corpus_attestation(stage1, cfg["yo"])
+    results = {}
+    for text_id, result in stage1.items():
+        result = copy.deepcopy(result)
+        clean_stage2(result, text_id, cfg, corrections, attestation, apply_i2)
+        results[text_id] = result
+    return results
 
 
 def render(lines: list[Line]) -> str:
@@ -422,18 +553,45 @@ def write_review(per_text: dict, review_dir: Path, cfg: dict) -> dict:
         sample = rng.sample(joins, min(sw["sample_size"], len(joins)))
         sampled[text_id] = len(sample)
         sample_rows += [[text_id, c.line, c.before, c.after, c.left, c.right] for c in sorted(sample, key=lambda c: c.line)]
-        pairs = Counter((c["a"].lower(), c["b"].lower(), c["joined"].lower()) for c in info["result"].split_candidates)
-        candidate_rows += [[text_id, a, b, j, n] for (a, b, j), n in pairs.most_common()]
+        pairs = Counter((c["a"].lower(), c["b"].lower(), c["joined"].lower(), c["reason"])
+                        for c in info["result"].split_candidates)
+        candidate_rows += [[text_id, a, b, j, reason, n] for (a, b, j, reason), n in pairs.most_common()]
         mixed = Counter((ln.number, tok) for ln in info["result"].lines for tok in mixed_script_tokens(ln.text))
         mixed_rows += [[text_id, line, tok] for (line, tok) in sorted(mixed)]
         bracket_rows += [[text_id, b["line"], b["kind"], b["segment"]] for b in info["result"].brackets_kept]
         proposal_rows += [[text_id, p["where"], p["line"], p["reasons"], p["text"]] for p in info["proposals"]]
     write_tsv(review_dir / "split_joins_sample.tsv", ["text", "line", "before", "after", "left", "right"], sample_rows)
-    write_tsv(review_dir / "split_candidates_not_joined.tsv", ["text", "a", "b", "would_be", "count"], candidate_rows)
+    write_tsv(review_dir / "split_candidates_not_joined.tsv", ["text", "a", "b", "would_be", "reason", "count"],
+              candidate_rows)
+    write_attested_review(per_text, review_dir, cfg["attested_joins"])
     write_tsv(review_dir / "mixed_script_tokens.tsv", ["text", "line", "token"], mixed_rows)
     write_tsv(review_dir / "brackets_not_removed.tsv", ["text", "line", "kind", "segment"], bracket_rows)
     write_tsv(review_dir / "front_back_proposals.tsv", ["text", "where", "line", "reasons", "text_line"], proposal_rows)
     return sampled
+
+
+def attested_pair_counts(joins: list[dict]) -> list[tuple[tuple[str, str, str], int, int]]:
+    """((a, b, ab) lowercased, joins, attested count) per distinct pair, most frequent first."""
+    counts = Counter((j["a"].lower(), j["b"].lower(), j["ab"].lower()) for j in joins)
+    attested = {(j["a"].lower(), j["b"].lower(), j["ab"].lower()): j["attested"] for j in joins}
+    return [(pair, n, attested[pair]) for pair, n in counts.most_common()]
+
+
+def write_attested_review(per_text: dict, review_dir: Path, cfg: dict) -> None:
+    """Rule i2 preview: every would-be join, per-pair counts, and a seeded sample for one text."""
+    preview, pair_rows = [], []
+    for text_id, info in per_text.items():
+        joins = info["projection"].attested_joins if info["projection"] else []
+        preview += [[text_id, j["line"], j["a"], j["b"], j["ab"], j["attested"], f"{j['left']}[{j['a']} {j['b']}]{j['right']}"]
+                    for j in joins]
+        pair_rows += [[text_id, a, b, ab, n, att] for (a, b, ab), n, att in attested_pair_counts(joins)]
+    write_tsv(review_dir / "i2_preview.tsv", ["text", "line", "A", "B", "AB", "attested_in_text", "context"], preview)
+    write_tsv(review_dir / "i2_pairs.tsv", ["text", "A", "B", "AB", "joins", "attested_in_text"], pair_rows)
+    target = cfg["sample_text"]
+    rows = [r for r in preview if r[0] == target]
+    sample = random.Random(cfg["seed"]).sample(rows, min(cfg["sample_size"], len(rows)))
+    write_tsv(review_dir / f"i2_sample_{target}.tsv", ["text", "line", "A", "B", "AB", "attested_in_text", "context"],
+              sorted(sample, key=lambda r: r[1]))
 
 
 def excerpt(text: str, n: int) -> str:
@@ -492,9 +650,11 @@ def render_report(per_text: dict, config: dict, sampled: dict) -> str:
           "| Item | " + " | ".join(ids) + " |", "|---|" + "---|" * len(ids)]
     rows = {
         "split-word joins sampled for review": [sampled.get(t, 0) for t in ids],
-        "split candidates not joined (occurrences)": [len(per_text[t]["result"].split_candidates) for t in ids],
-        "split candidates not joined (distinct pairs)": [
-            len({(c["a"].lower(), c["b"].lower()) for c in per_text[t]["result"].split_candidates}) for t in ids],
+        "split candidates not joined, all known (occurrences)": [len(both_known(per_text[t])) for t in ids],
+        "split candidates not joined, all known (distinct pairs)": [
+            len({(c["a"].lower(), c["b"].lower()) for c in both_known(per_text[t])}) for t in ids],
+        "split joins blocked by a guard (occurrences)": [
+            sum(1 for c in per_text[t]["result"].split_candidates if c["reason"] != BOTH_KNOWN) for t in ids],
         "mixed-script tokens left": [sum(len(mixed_script_tokens(ln.text)) for ln in per_text[t]["result"].lines)
                                      for t in ids],
         "bracketed segments not removed": [sum(1 for b in per_text[t]["result"].brackets_kept if b["kind"] == "bracketed")
@@ -506,7 +666,42 @@ def render_report(per_text: dict, config: dict, sampled: dict) -> str:
     L += [f"| {k} | " + " | ".join(str(v) for v in vals) + " |" for k, vals in rows.items()]
     L += ["", f"Split-word review sample: {cfg['split_words']['sample_size']} joins per text, "
               f"seed {cfg['split_words']['seed']} (`random.Random`, texts in corpus order)."]
+
+    per = cfg["candidate_rate_per"]
+    L += ["", "## Split-word candidate rate", "",
+          f"Candidates not joined (A, B and AB all dictionary words) per {per:,} word tokens of the cleaned text.", "",
+          f"| Text | Word tokens | Candidates | per {per:,} tokens |", "|---|---|---|---|"]
+    for t in ids:
+        tokens, cands = per_text[t]["after"]["tokens"], len(both_known(per_text[t]))
+        L.append(f"| {t} | {tokens} | {cands} | {per * cands / tokens:.1f} |")
+
+    att = cfg["attested_joins"]
+    L += ["", "## Rule i2 (attestation joins): projected effect", "",
+          f"Rule i2 is **{'ON' if att['apply'] else 'OFF'}** (`clean.attested_joins.apply`). The projection runs the full",
+          f"pipeline with i2 applied (AB attested ≥ {att['min_attested']} times as one token in the same text, pair",
+          "«A B» absent from the other four texts, rule i guards); it is not written as cleaned text.", ""]
+    if any(per_text[t]["projection_error"] for t in ids):
+        L.append(f"**Projection failed:** {per_text[ids[0]]['projection_error']}")
+    else:
+        L += ["| Text | Would-be joins | Distinct pairs | Types (i2 off) | Types (i2 on) | Δ types | Δ types % |",
+              "|---|---|---|---|---|---|---|"]
+        for t in ids:
+            joins = per_text[t]["projection"].attested_joins
+            off, on = per_text[t]["after"]["types"], per_text[t]["projected_after"]["types"]
+            L.append(f"| {t} | {len(joins)} | {len(attested_pair_counts(joins))} | {off} | {on} | {on - off:+d} | "
+                     f"{100 * (on - off) / off:+.1f}% |")
+        target = att["sample_text"]
+        L += ["", f"Review: `i2_preview.tsv` (all would-be joins), `i2_pairs.tsv` (joins per distinct pair), "
+                  f"`i2_sample_{target}.tsv` ({att['sample_size']} joins, seed {att['seed']}).", "",
+              f"### {target}: {att['top_n']} most frequent would-be i2 joins", "",
+              "| A B | AB | Joins | AB attested in text |", "|---|---|---|---|"]
+        for (a, b, ab), n, attested in attested_pair_counts(per_text[target]["projection"].attested_joins)[:att["top_n"]]:
+            L.append(f"| {a} {b} | {ab} | {n} | {attested} |")
     return "\n".join(L) + "\n"
+
+
+def both_known(info: dict) -> list[dict]:
+    return [c for c in info["result"].split_candidates if c["reason"] == BOTH_KNOWN]
 
 
 HALF_HYPHEN_RE = re.compile(rf"[{CYR}](?:- +| +-)[{CYR}]")
@@ -523,11 +718,18 @@ def run(config_path: Path = DEFAULT_CONFIG, clean_dir: Path | None = None, revie
     corrections = read_manual_corrections(repo_path(config, "manual_corrections"))
     clean_dir.mkdir(parents=True, exist_ok=True)
 
+    raws = {t: (raw_dir / f"{t}.txt").read_bytes() for t in config["corpus"]["texts"]}
+    stage1 = {t: clean_stage1(raw, t, cfg) for t, raw in raws.items()}
+    results = clean_corpus(stage1, cfg, corrections, apply_i2=cfg["attested_joins"]["apply"])
+    # Projection with rule i2 applied, for the report and review files only; never written as cleaned text.
+    try:
+        projection, projection_error = clean_corpus(stage1, cfg, corrections, apply_i2=True), None
+    except CleaningError as err:
+        projection, projection_error = None, str(err)
+
     per_text = {}
-    for text_id in config["corpus"]["texts"]:
-        raw = (raw_dir / f"{text_id}.txt").read_bytes()
-        result = clean_text(raw, text_id, cfg, corrections)
-        before_text = raw.decode(cfg["encoding"]).replace("\r\n", "\n").replace("\r", "\n")
+    for text_id, result in results.items():
+        before_text = raws[text_id].decode(cfg["encoding"]).replace("\r\n", "\n").replace("\r", "\n")
         after_text = render(result.lines)
         per_text[text_id] = {
             "result": result,
@@ -535,6 +737,9 @@ def run(config_path: Path = DEFAULT_CONFIG, clean_dir: Path | None = None, revie
             "after": word_stats(after_text),
             "proposals": front_back_proposals(result.lines, cfg["front_back_proposals"]),
             "residual_half_hyphens": len(HALF_HYPHEN_RE.findall(after_text)),
+            "projection": projection[text_id] if projection else None,
+            "projected_after": word_stats(render(projection[text_id].lines)) if projection else None,
+            "projection_error": projection_error,
         }
         write_outputs(text_id, result, clean_dir)
 

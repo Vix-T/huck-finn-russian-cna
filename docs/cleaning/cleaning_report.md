@@ -15,11 +15,12 @@ rationale: `docs/decisions.md`.
 | e. Latin look-alikes to Cyrillic | 1 | 0 | 1 | 0 | 1 |
 | f. standalone token replacement | 0 | 3 | 1 | 0 | 0 |
 | g. punctuation | 2352 | 155 | 520 | 121 | 204 |
-| h. broken hyphenation rejoined | 0 | 2 | 20 | 3 | 36 |
-| i. split words joined | 94 | 2 | 4 | 2 | 0 |
+| h. broken hyphenation rejoined | 0 | 2 | 22 | 3 | 40 |
+| i. split words joined | 92 | 0 | 1 | 0 | 0 |
+| i2. split words joined by attestation (only if enabled) | 0 | 0 | 0 | 0 | 0 |
 | j. ё to е | 4 | 1 | 22 | 3 | 23 |
-| k. manual corrections | 0 | 0 | 0 | 0 | 0 |
-| **total** | 4629 | 2755 | 1422 | 4513 | 5016 |
+| k. manual corrections | 1 | 1 | 1 | 0 | 0 |
+| **total** | 4628 | 2754 | 1422 | 4511 | 5020 |
 
 ## Word tokens and types, before and after
 
@@ -28,11 +29,11 @@ Types are lowercased. *Before* is the raw text after BOM strip and newline norma
 
 | Text | Label | Tokens before | Tokens after | Δ tokens | Types before | Types after | Δ types | Δ types % |
 |---|---|---|---|---|---|---|---|---|
-| Ru1 | Ru-1911-Engelgardt | 115056 | 114859 | -197 | 20876 | 20716 | -160 | -0.8% |
-| Ru2 | Ru-1926-Anon | 48208 | 48207 | -1 | 10291 | 10291 | +0 | +0.0% |
-| Ru3 | Ru-1933-Chukovsky-(Ed.) | 63217 | 63193 | -24 | 12689 | 12684 | -5 | -0.0% |
-| Ru4 | Ru-1949-Braude | 91768 | 91763 | -5 | 14939 | 14936 | -3 | -0.0% |
-| Ru5 | Ru-1960-Daruzes | 92298 | 92144 | -154 | 14399 | 14356 | -43 | -0.3% |
+| Ru1 | Ru-1911-Engelgardt | 115056 | 114861 | -195 | 20876 | 20714 | -162 | -0.8% |
+| Ru2 | Ru-1926-Anon | 48208 | 48210 | +2 | 10291 | 10291 | +0 | +0.0% |
+| Ru3 | Ru-1933-Chukovsky-(Ed.) | 63217 | 63195 | -22 | 12689 | 12683 | -6 | -0.0% |
+| Ru4 | Ru-1949-Braude | 91768 | 91765 | -3 | 14939 | 14936 | -3 | -0.0% |
+| Ru5 | Ru-1960-Daruzes | 92298 | 92140 | -158 | 14399 | 14357 | -42 | -0.3% |
 
 ## Front matter removed (rule b)
 
@@ -65,12 +66,76 @@ that are all caps or contain a keyword (see config). Full list: `data/interim/cl
 
 | Item | Ru1 | Ru2 | Ru3 | Ru4 | Ru5 |
 |---|---|---|---|---|---|
-| split-word joins sampled for review | 50 | 2 | 4 | 2 | 0 |
-| split candidates not joined (occurrences) | 3791 | 1427 | 1811 | 3161 | 3142 |
-| split candidates not joined (distinct pairs) | 1434 | 498 | 591 | 714 | 771 |
-| mixed-script tokens left | 1 | 0 | 0 | 0 | 0 |
+| split-word joins sampled for review | 50 | 0 | 1 | 0 | 0 |
+| split candidates not joined, all known (occurrences) | 3792 | 1427 | 1811 | 3161 | 3142 |
+| split candidates not joined, all known (distinct pairs) | 1434 | 498 | 591 | 714 | 771 |
+| split joins blocked by a guard (occurrences) | 2 | 2 | 3 | 2 | 0 |
+| mixed-script tokens left | 0 | 0 | 0 | 0 | 0 |
 | bracketed segments not removed | 0 | 0 | 0 | 0 | 0 |
 | unmatched brackets / marker outside brackets | 0 | 0 | 0 | 0 | 0 |
-| half-spaced hyphens left (`word- word`) | 0 | 0 | 15 | 1 | 35 |
+| half-spaced hyphens left (`word- word`) | 0 | 0 | 13 | 1 | 31 |
 
 Split-word review sample: 50 joins per text, seed 20261019 (`random.Random`, texts in corpus order).
+
+## Split-word candidate rate
+
+Candidates not joined (A, B and AB all dictionary words) per 10,000 word tokens of the cleaned text.
+
+| Text | Word tokens | Candidates | per 10,000 tokens |
+|---|---|---|---|
+| Ru1 | 114861 | 3792 | 330.1 |
+| Ru2 | 48210 | 1427 | 296.0 |
+| Ru3 | 63195 | 1811 | 286.6 |
+| Ru4 | 91765 | 3161 | 344.5 |
+| Ru5 | 92140 | 3142 | 341.0 |
+
+## Rule i2 (attestation joins): projected effect
+
+Rule i2 is **OFF** (`clean.attested_joins.apply`). The projection runs the full
+pipeline with i2 applied (AB attested ≥ 2 times as one token in the same text, pair
+«A B» absent from the other four texts, rule i guards); it is not written as cleaned text.
+
+| Text | Would-be joins | Distinct pairs | Types (i2 off) | Types (i2 on) | Δ types | Δ types % |
+|---|---|---|---|---|---|---|
+| Ru1 | 459 | 343 | 20714 | 20494 | -220 | -1.1% |
+| Ru2 | 8 | 8 | 10291 | 10287 | -4 | -0.0% |
+| Ru3 | 6 | 6 | 12683 | 12683 | +0 | +0.0% |
+| Ru4 | 23 | 21 | 14936 | 14931 | -5 | -0.0% |
+| Ru5 | 40 | 29 | 14357 | 14352 | -5 | -0.0% |
+
+Review: `i2_preview.tsv` (all would-be joins), `i2_pairs.tsv` (joins per distinct pair), `i2_sample_Ru1.tsv` (100 joins, seed 20261020).
+
+### Ru1: 30 most frequent would-be i2 joins
+
+| A B | AB | Joins | AB attested in text |
+|---|---|---|---|
+| толь ко | только | 8 | 331 |
+| об разом | образом | 8 | 155 |
+| ко роль | король | 7 | 130 |
+| положи тельно | положительно | 6 | 44 |
+| во обще | вообще | 5 | 58 |
+| те тушка | тетушка | 5 | 83 |
+| уда лось | удалось | 4 | 56 |
+| посте пенно | постепенно | 4 | 15 |
+| при знаться | признаться | 4 | 37 |
+| да же | даже | 4 | 161 |
+| в место | вместо | 3 | 41 |
+| на верное | наверное | 3 | 24 |
+| на шу | нашу | 3 | 14 |
+| на конец | наконец | 3 | 76 |
+| край ней | крайней | 3 | 59 |
+| воз разил | возразил | 3 | 53 |
+| ост ров | остров | 3 | 18 |
+| по жалуй | пожалуй | 3 | 61 |
+| ко роля | короля | 3 | 42 |
+| пред ставить | представить | 3 | 16 |
+| на деюсь | надеюсь | 3 | 20 |
+| хоте лось | хотелось | 3 | 37 |
+| де нег | денег | 2 | 23 |
+| рас сказывать | рассказывать | 2 | 28 |
+| тем у | тему | 2 | 7 |
+| разбой ников | разбойников | 2 | 15 |
+| убил и | убили | 2 | 14 |
+| пяти десяти | пятидесяти | 2 | 3 |
+| с на | сна | 2 | 2 |
+| пони маешь | понимаешь | 2 | 4 |

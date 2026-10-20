@@ -43,5 +43,24 @@ Rules run in the order a–k given in `src/huckfinn_cna/clean.py`; every change 
 8. **For later stages: edge weights.** Edge weights are set to 1 for motif analysis; bigram counts are
    kept as weights for weighted betweenness.
 
+## Cleaning follow-up (2026-10-20)
+
+9. **Split-word guards** (rule i; config `clean.split_words`). Never join when B starts with a capital
+   letter (A may be capitalized, e.g. at sentence start), and never join when A is «не» or «ни»: those are
+   spelling choices, not OCR damage. Blocked pairs are listed with the guard as the reason. Known cost:
+   the guard on «не» also blocks the genuine OCR split «не годяю» → «негодяю» (Ru1).
+10. **More hyphen rejoins** (rule h; config `clean.hyphenation`). «кое- X» → «кое-X» for any word X, and
+    «из- под», «из- за» → «из-под», «из-за», in any spacing variant. Rule g leaves a fully spaced hyphen
+    alone when a rule h pattern would rejoin it, so rule h sees every variant.
+11. **Manual corrections** (rule k): undo the wrong join «по сту» → «посту» (Ru3), fix «nо-овечьи» →
+    «по-овечьи» (Ru1) and Latin «c» → «с» in «c герцогом» (Ru2). The guards in 9 already prevent the wrong
+    joins «ДонКи» and «аБуд». Re-cleaning a cleaned text re-does a join that a manual entry undid; the
+    idempotence check allows exactly those changes.
+12. **Rule i2 exists but is OFF pending review** (config `clean.attested_joins.apply = false`). It would
+    join A B → AB when AB occurs as one token at least `min_attested` times in the same text, the pair
+    «A B» occurs in none of the other four texts, and the rule i guards allow it. Each run writes a preview
+    (`data/interim/clean/review/i2_*.tsv`) and its projected effect in the cleaning report; the cleaned
+    texts are not changed.
+
 Manual corrections go in `data/corrections/manual.tsv` (text, raw line, before, after, reason) and are
 applied last (rule k); each entry must match exactly once or the run fails.

@@ -25,6 +25,7 @@ encoding = "utf-8-sig"       # strips the BOM
 unicode_form = "NFC"
 log_context_chars = 30       # characters of context either side of a change in Ru#_changes.tsv
 report_excerpt_chars = 100   # max characters of any text line quoted in the committed report
+candidate_rate_per = 10000   # split-word candidate rate is reported per this many word tokens
 
 # Rule b. Front matter removed by text match. A block runs from the first line whose
 # stripped text starts with `first`, through the next line (inclusive) whose stripped
@@ -106,12 +107,28 @@ comma_runs = true                        # ",," (or longer) collapsed to ","
 particles = ["то", "либо", "нибудь", "ка", "таки"]
 po_word = "по"
 po_suffixes = ["ому", "ему", "ски", "цки", "ьи"]
+prefixes = ["кое"]                            # "кое- X" -> "кое-X" for any Cyrillic word X
+fixed_pairs = [["из", "под"], ["из", "за"]]   # "из- под" -> "из-под"
+# Rule g leaves a fully spaced hyphen alone when a rule h pattern above matches it,
+# so rule h rejoins every spacing variant.
 
 # Rule i. Dictionary-based split-word repair (pymorphy3 word_is_known).
 [clean.split_words]
 # Pairs A B are joined when AB is a dictionary word and A or B is not; repeated until no change.
 sample_size = 50            # joins per text sampled for manual review
 seed = 20261019              # random seed for the review sample
+# Guards (also used by rule i2):
+never_join_after = ["не", "ни"]       # A (lowercased) in this list: never join
+block_if_second_capitalized = true    # B starting with a capital letter: never join
+
+# Rule i2. Within-text attestation join, runs after rule i. OFF pending review.
+[clean.attested_joins]
+apply = false                # false = preview only (review files and report); cleaned texts unchanged
+min_attested = 2             # AB must occur as a single token at least this often in the same text
+sample_text = "Ru1"          # text whose would-be joins are sampled for hand-checking
+sample_size = 100
+seed = 20261020
+top_n = 30                   # most frequent would-be joins listed in the report (sample_text only)
 
 # Rule j.
 [clean.yo]
