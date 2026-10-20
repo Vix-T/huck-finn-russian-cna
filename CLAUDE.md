@@ -26,6 +26,8 @@ network analysis (word-adjacency networks, 3-node motifs, betweenness).
 - Seed all randomness and record the seeds.
 - Never commit raw texts. Commit code, configs, tests and docs.
 - Write small, testable functions; tests go in tests/.
+- At the end of each stage, append that stage's section to docs/amendment/amendment_report.md
+  and update the Executive Summary table.
 - Commit at the end of each task with a clear message. Do not push unless asked.
 - When done, report: what you did, what you found, anything surprising or
   uncertain.
