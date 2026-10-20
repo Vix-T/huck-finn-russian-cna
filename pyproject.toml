@@ -5,9 +5,13 @@ description = "Stylometry and complex network analysis of five Russian translati
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "matplotlib>=3.11.2",
     "pymorphy3>=2.0.6",
     "pymorphy3-dicts-ru>=2.4.417150.4580142",
     "razdel==0.5.0",
+    "ru-core-news-lg",
+    "spacy>=3.8.16",
+    "stanza>=1.15.0",
 ]
 
 [build-system]
@@ -16,3 +20,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/huckfinn_cna"]
+
+[tool.uv.sources]
+ru-core-news-lg = { url = "https://github.com/explosion/spacy-models/releases/download/ru_core_news_lg-3.8.0/ru_core_news_lg-3.8.0-py3-none-any.whl" }

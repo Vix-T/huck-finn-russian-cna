@@ -70,3 +70,44 @@ Rules run in the order a–k given in `src/huckfinn_cna/clean.py`; every change 
 
 Manual corrections go in `data/corrections/manual.tsv` (text, raw line, before, after, reason) and are
 applied last (rule k); each entry must match exactly once or the run fails.
+
+## Tokenization and tagging (2026-10-20)
+
+Implemented in `src/huckfinn_cna/tag.py` (tagging) and `src/huckfinn_cna/pos_check.py` (POS re-check);
+parameters in config `[tag]` and `[pos_check]`.
+
+14. **Taggers and exact versions.** Stanza **1.15.0** with Russian model resources **1.15.0**
+    (packages: tokenize `syntagrus_nocharlm`, pos `syntagrus_charlm`, lemma `syntagrus_nocharlm`; the
+    pos model also loads `pretrain/conll17` and the `newswiki` character LMs). spaCy **3.8.16** with
+    `ru_core_news_lg` **3.8.0**, a pinned direct-URL dependency (the version listed for spaCy 3.8 in
+    spaCy's compatibility table). Stanza models are stored in `models/stanza/` (config
+    `paths.stanza_model_dir`, gitignored) and fetched with `uv run python -m huckfinn_cna.tag --download`.
+    `tag.py` refuses to run if the installed versions differ from config. Inference has no randomness,
+    so no seed applies.
+15. **Tokens and sentences.** Stanza tokenizes and splits sentences per paragraph (one non-empty line of
+    the cleaned text); no sentence crosses a paragraph. **Hyphenated words stay single tokens** (project
+    owner's decision, 2026-10-20): Stanza's tokenizer splits 12–21% of them (mostly -то, -ка and
+    compounds such as мало-помалу), so pieces lying inside one hyphenated word with no space are merged,
+    and Stanza then tags and lemmatizes the merged tokens as pre-tokenized sentences. A letter run that
+    touches a dangling hyphen (OCR line-break residue left by cleaning, e.g. «Алексан- дер» in Ru5) is
+    not treated as a hyphenated word and is left as Stanza tokenizes it.
+16. **Cross-check.** spaCy receives exactly Stanza's tokens (with the original spacing), not its own
+    tokenization; components excluded: `ner`.
+17. **Integrity checks** (run fails otherwise): concatenated tokens equal the paragraph without
+    whitespace, each token matches the text at its offsets, and no hyphenated word is split.
+18. **Columns.** `para_id`: 1-based index of the paragraph (non-empty line); `sent_id`: 1-based across
+    the text; `tok_id`: 1-based within the sentence. `is_word`: letters only, any script, internal
+    hyphens allowed. `is_punct`: every character in a Unicode punctuation category. `is_content`: Stanza
+    UPOS in `tag.content_upos` (NOUN, VERB, ADJ, ADV, PROPN). `verbform` / `spacy_verbform`: the VerbForm
+    value from each tagger's features. `spacy_feats` is kept so the VerbForm breakdown can be given for
+    both taggers.
+19. **Cache.** A text is re-tagged only if the SHA-256 of its cleaned file plus the `[tag]` config
+    changes (`data/interim/tagged/Ru#.meta.json`). Code changes are not part of the key; delete the
+    tagged files to force a re-run.
+20. **POS re-check definitions.** Word tokens only (`is_word`), stop words kept. Ranks are competition
+    ranks over all UPOS tags in a text. The heatmap columns are the ten tags with the highest summed
+    count over all texts, as in the old Figure 6. VerbForm breakdown over VERB and AUX tokens.
+    Agreement is the share of word tokens with identical UPOS from both taggers.
+21. **Running uv inside the Claude Code sandbox.** Because `ru_core_news_lg` is a direct-URL dependency,
+    plain `uv run` re-checks its URL on github.com; inside the sandbox use `uv run --frozen`, which
+    installs from `uv.lock` without network access.

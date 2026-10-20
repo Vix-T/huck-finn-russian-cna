@@ -1,0 +1,45 @@
+"""Tests for huckfinn_cna.pos_check. Run: uv run python -m unittest discover tests"""
+
+import unittest
+from collections import Counter
+
+from huckfinn_cna import pos_check as pc
+
+
+def row(upos, spacy_upos, word=True, vf="", spacy_vf=""):
+    return {"upos": upos, "spacy_upos": spacy_upos, "is_word": "1" if word else "0",
+            "verbform": vf, "spacy_verbform": spacy_vf}
+
+
+class MeasureTests(unittest.TestCase):
+    def test_word_rows(self):
+        rows = [row("NOUN", "NOUN"), row("PUNCT", "PUNCT", word=False)]
+        self.assertEqual(len(pc.word_rows(rows)), 1)
+
+    def test_ranks_ties_share_lower_rank(self):
+        r = pc.ranks(Counter({"NOUN": 5, "VERB": 5, "ADJ": 2}))
+        self.assertEqual(r, {"NOUN": 1, "VERB": 1, "ADJ": 3})
+
+    def test_top_order_stable_on_ties(self):
+        self.assertEqual(pc.top_order(Counter({"VERB": 5, "NOUN": 5, "ADJ": 2}), 2), ["NOUN", "VERB"])
+
+    def test_noun_verb_ratios(self):
+        r = pc.noun_verb_ratios(Counter({"NOUN": 6, "VERB": 4, "AUX": 2}))
+        self.assertAlmostEqual(r["noun_verb"], 1.5)
+        self.assertAlmostEqual(r["noun_verb_aux"], 1.0)
+        self.assertIsNone(pc.noun_verb_ratios(Counter({"NOUN": 3}))["noun_verb"])
+
+    def test_verbform_counts(self):
+        rows = [row("VERB", "VERB", vf="Fin"), row("AUX", "AUX", vf="Fin"), row("VERB", "VERB", vf="Inf"),
+                row("NOUN", "NOUN")]
+        self.assertEqual(pc.verbform_counts(rows, "upos", "verbform", {"VERB", "AUX"}), Counter({"Fin": 2, "Inf": 1}))
+
+    def test_agreement(self):
+        rows = [row("NOUN", "NOUN"), row("NOUN", "PROPN"), row("VERB", "AUX"), row("VERB", "VERB")]
+        rate, pairs = pc.agreement(rows)
+        self.assertAlmostEqual(rate, 0.5)
+        self.assertEqual(pairs, Counter({("NOUN", "PROPN"): 1, ("VERB", "AUX"): 1}))
+
+    def test_heatmap_tags_summed_over_texts(self):
+        tags = pc.heatmap_tags({"A": Counter({"NOUN": 10, "VERB": 1}), "B": Counter({"VERB": 12, "ADJ": 3})}, 2)
+        self.assertEqual(tags, ["VERB", "NOUN"])

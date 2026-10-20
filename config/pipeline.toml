@@ -7,6 +7,11 @@ clean_dir = "data/interim/clean"
 review_dir = "data/interim/clean/review"
 manual_corrections = "data/corrections/manual.tsv"
 cleaning_report = "docs/cleaning/cleaning_report.md"
+audit_json = "docs/audit/data_audit.json"
+tagged_dir = "data/interim/tagged"
+stanza_model_dir = "models/stanza"          # Stanza models live in the project, not in the home folder
+tagging_report = "docs/tagging/tagging_report.md"
+pos_rank_figure = "docs/amendment/figures/pos_rank_heatmap_stanza.png"
 
 [corpus]
 texts = ["Ru1", "Ru2", "Ru3", "Ru4", "Ru5"]
@@ -139,3 +144,28 @@ applied_context_chars = 40   # characters of context either side of the joined p
 [clean.yo]
 "ё" = "е"
 "Ё" = "Е"
+
+# --- Tokenization and tagging -----------------------------------------------------
+
+[tag]
+# Exact versions; tag.py refuses to run if the installed versions differ.
+stanza_version = "1.15.0"
+stanza_resources_version = "1.15.0"   # Stanza model resources (resources_1.15.0.json)
+stanza_lang = "ru"
+# Stanza processor -> model package. These are the Russian defaults for resources 1.15.0
+# (UD SynTagRus); the POS tagger also loads its pretrained embeddings and character LMs.
+stanza_packages = { tokenize = "syntagrus_nocharlm", pos = "syntagrus_charlm", lemma = "syntagrus_nocharlm" }
+spacy_version = "3.8.16"
+spacy_model = "ru_core_news_lg"
+spacy_model_version = "3.8.0"
+spacy_exclude = ["ner"]               # pipeline components not loaded (not needed for POS/lemma)
+spacy_batch_size = 64                 # paragraphs per spaCy batch
+# Content words: Stanza UPOS tags counted as content (is_content column).
+content_upos = ["NOUN", "VERB", "ADJ", "ADV", "PROPN"]
+
+[pos_check]
+top_n = 10                            # UPOS tags ranked per text (old Figure 6 used the top 10)
+verbforms = ["Fin", "Inf", "Part", "Conv"]
+verbform_upos = ["VERB", "AUX"]       # tokens counted in the VerbForm breakdown
+disagreement_top_n = 10               # most common Stanza/spaCy UPOS disagreement pairs per text
+figure_dpi = 300

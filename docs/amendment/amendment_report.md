@@ -10,11 +10,11 @@ each pipeline stage, and the Executive Summary is updated with it.
 
 ## 1. Executive Summary
 
-We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. Two stages are complete:
-the data audit with text preparation, and an audit of the previous motif results.
+We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. Three stages are
+complete: the data audit with text preparation, an audit of the previous motif results, and
+tokenization with part-of-speech tagging.
 
-**Text preparation** changes how the article should describe its data, but no reported number has
-changed yet. The 1911 Engel'gardt text (Ru-1911) contains OCR damage, mainly words split by stray
+**Text preparation** changes how the article should describe its data. The 1911 Engel'gardt text (Ru-1911) contains OCR damage, mainly words split by stray
 spaces. We repaired it, which reduces its vocabulary by 382 word types (1.8%). In the other four
 texts the change is at most 42 types (0.3%). We also found that the old cleaning step deleted the
 letter ё and fused hyphenated words, and we have replaced it. All article numbers are recomputed in
@@ -33,6 +33,14 @@ It also corrects four statements in the article:
 These need wording changes in the Data Pipeline section, §3.4.1 and §3.5. The motif figures
 (Figures 9–11) will be regenerated in the Motif Analysis stage.
 
+**Part-of-speech tagging changes a finding.** The article reports that the 1960 Daruzes translation
+is the only one to rank verbs above nouns (Figure 6). With every word tagged in context, stop words
+kept, and two independent taggers, Daruzes does rank verbs above nouns, but so do the 1926, 1933 and
+1949 translations. The 1911 Engel'gardt translation is the only one in which nouns outnumber
+(lexical) verbs; if the auxiliary «быть» is counted as a verb, verbs lead in all five. Daruzes has
+the lowest noun-to-verb ratio of the five (0.81), with Braude next (0.85). Figure 6 is
+replaced, and §3.2.2, the Executive Summary and the Discussion need revised text.
+
 ### Changes at a glance
 
 | Stage | Change | Impact level | Article section affected |
@@ -49,6 +57,9 @@ These need wording changes in the Data Pipeline section, §3.4.1 and §3.5. The 
 | Audit of Previous Motif Results | Braude's network ranks 3rd of 5 by edges; the "more connections" explanation is withdrawn | Wording | §3.4.1 (Figure 9 discussion) |
 | Audit of Previous Motif Results | mfinder ignores edge weights | Wording | Data Pipeline; §3.4.1 |
 | Audit of Previous Motif Results | Motif member lists are partial samples from a different run | Wording | §3.5 |
+| Tokenization and Tagging | POS tagging: pymorphy2 on lemmas without stop words → Stanza in context on the full text, cross-checked with spaCy | Finding | §3.2.2, Figure 6; Executive Summary; Discussion |
+| Tokenization and Tagging | Verbs outrank nouns in Ru-1926, Ru-1933, Ru-1949 and Ru-1960; the Daruzes "inversion" is not unique | Finding | §3.2.2, Figure 6; Executive Summary; Discussion |
+| Tokenization and Tagging | Hyphenated words (что-то, мало-помалу) kept as single tokens | None | — |
 
 ---
 
@@ -428,12 +439,144 @@ Figures 9, 10 and 11 will be regenerated from the rebuilt networks in the Motif 
 
 ## 6. Tokenization and Tagging
 
-To be completed.
+### 6.1 What changed
+
+**Old.** Part-of-speech tags came from pymorphy2, a dictionary-based analyser that tags each word in
+isolation, without its sentence. It was run on the lemmatized text with stop words removed
+(`Ru#_clean_lemmatized_nostops.txt`, script `03feature_extraction.py`). Because the input was
+lemmas, every verb had already been reduced to its infinitive, so finite verbs were counted under
+the infinitive tag INFN. §3.2.2 states that stop words were retained for the part-of-speech
+analysis, but the code used the file without them.
+
+**New.** Every paragraph of the prepared text is tokenized, split into sentences, tagged and
+lemmatized by Stanza⁶ (version 1.15.0, Russian models trained on the UD SynTagRus treebank), with
+each word tagged in its sentence. Tags follow the Universal Dependencies (UD) scheme⁸. Stop words are
+kept. As a cross-check, spaCy⁷ (version 3.8.16, model `ru_core_news_lg` 3.8.0) tags exactly the same
+tokens. Hyphenated words (что-то, мало-помалу, Взгляни-ка) are kept as single tokens. Stanza's
+tokenizer splits 12–21% of them, and these pieces are merged before tagging. Every character of the
+prepared text is accounted for in the tokens, which an automated check confirms.
+
+### 6.2 Why
+
+Tagging a lemma rather than the word in its sentence discards the information that decides many tags
+(case, tense, whether «было» is a verb or an auxiliary). It also turns every finite verb into an
+infinitive. A part-of-speech profile meant to capture the translator's grammar needs every word,
+including function words, tagged in context. A second tagger shows which results depend on the
+choice of tagger.
+
+### 6.3 Effect
+
+Old ranks (Figure 6, pymorphy2 tags on lemmas without stop words):
+
+| Translation | NOUN | INFN |
+|---|---|---|
+| Ru-1911-Engelgardt | 1 | 2 |
+| Ru-1926-Anon | 1 | 2 |
+| Ru-1933-Chukovsky-(Ed.) | 1 | 2 |
+| Ru-1949-Braude | 1 | 2 |
+| Ru-1960-Daruzes | 2 | 1 |
+
+New ranks and proportions of word tokens (stop words kept):
+
+| Translation | Stanza: NOUN rank | Stanza: VERB rank | Stanza: NOUN | Stanza: VERB | Stanza: NOUN : VERB | spaCy: NOUN rank | spaCy: VERB rank | spaCy: NOUN : VERB |
+|---|---|---|---|---|---|---|---|---|
+| Ru-1911-Engelgardt | 1 | 2 | 19.8% | 18.9% | 1.048 | 1 | 2 | 1.071 |
+| Ru-1926-Anon | 2 | 1 | 18.4% | 19.4% | 0.949 | 2 | 1 | 0.979 |
+| Ru-1933-Chukovsky-(Ed.) | 2 | 1 | 18.8% | 19.7% | 0.954 | 2 | 1 | 0.986 |
+| Ru-1949-Braude | 2 | 1 | 16.6% | 19.6% | 0.846 | 2 | 1 | 0.871 |
+| Ru-1960-Daruzes | 2 | 1 | 16.3% | 20.1% | 0.811 | 2 | 1 | 0.847 |
+
+In UD, «быть» used as a copula or auxiliary is tagged AUX, not VERB. Counting AUX with VERB lowers
+every ratio (Stanza: 0.965, 0.860, 0.874, 0.771, 0.750; spaCy: 0.983, 0.885, 0.900, 0.790, 0.782).
+The order of the five translations is unchanged, but Ru-1911 then also has more verbs than nouns, so
+with auxiliaries included verbs outnumber nouns in every translation.
+
+**Does Daruzes still rank verbs above nouns?** Yes, under both taggers. But the article's finding
+was that Daruzes is the *only* translation to do so, and that no longer holds. Verbs rank first and
+nouns second in all four translations from 1926 to 1960. The 1911 Engel'gardt translation is the
+only one with nouns first, and only when lexical verbs (VERB) are counted without the auxiliary
+(AUX). Daruzes has the most verb-heavy profile of the five on either count, with Braude close behind.
+
+Verb forms (Stanza; share of VERB and AUX tokens):
+
+| Translation | Finite | Infinitive | Participle | Converb |
+|---|---|---|---|---|
+| Ru-1911-Engelgardt | 64.6% | 19.0% | 6.2% | 5.3% |
+| Ru-1926-Anon | 71.2% | 16.6% | 5.1% | 3.3% |
+| Ru-1933-Chukovsky-(Ed.) | 72.7% | 16.3% | 4.2% | 3.1% |
+| Ru-1949-Braude | 76.0% | 16.0% | 2.8% | 1.4% |
+| Ru-1960-Daruzes | 77.5% | 14.9% | 1.8% | 1.4% |
+
+spaCy gives the same ordering, within 1.1 percentage points of each value.
+
+The two taggers agree on 93.5–95.1% of word tokens in every translation. The most common
+disagreements are determiners versus adjectives or pronouns (mostly «который», «сам», «самый»,
+«другой»), nouns versus proper nouns, and verbs versus adverbs. NOUN/VERB disagreements make up
+0.16–0.22% of word tokens. Full tables: `docs/tagging/tagging_report.md`.
+
+**Figure 6 (replacement).** `docs/amendment/figures/pos_rank_heatmap_stanza.png`
+
+![Figure 6 (replacement)](figures/pos_rank_heatmap_stanza.png)
+
+*Figure 6 (replacement): Rank of the ten most frequent UPOS tags in each translation (Stanza, word
+tokens, stop words kept; 1 = most frequent). Verbs rank first in every translation except the 1911
+Engel'gardt, where nouns do.*
+
+**Sentence and word counts.** Stanza finds 6–8% more sentences in the prepared text than the razdel
+splitter found in the raw text during the data audit (e.g. Ru-1911: 8,073 versus 7,593), and its word-token counts are within 0.1% of the audit
+definition on the prepared text. Which sentence segmentation is used for average sentence length is
+decided in Section 7.
+
+**Impact level: Finding** (and Figure: Figure 6 is replaced).
+
+### 6.4 Suggested article text
+
+**§3.2.2, Parts-of-Speech Analysis.** Replace the two paragraphs beginning "To compare grammatical
+choices of the translators …" and "The heatmap reveals consistency across the first four
+translations …" with:
+
+> To compare the translators' grammatical choices, we tagged every word in its sentence with Stanza,
+> using the Universal Dependencies tag set, and cross-checked the tags with a second tagger (spaCy),
+> which agreed on 93.5–95.1% of words in every translation. Stop words were kept. Because the
+> translations differ in length, we compare ranks and proportions rather than raw counts (Figure 6).
+>
+> The 1911 Engel'gardt translation is the only one in which nouns outnumber verbs (ratio of nouns to
+> verbs 1.05; counting the auxiliary «быть» as a verb, verbs slightly outnumber nouns here too). In the
+> four later translations verbs rank first and nouns second, and the ratio falls
+> from 0.95 in the abridged 1926 and 1933 translations to 0.85 in Braude and 0.81 in Daruzes. Both
+> taggers give the same ranking. The later translations also rely more on finite verb forms (from
+> 65% of verbs in Engel'gardt to 78% in Daruzes) and less on participles (6.2% to 1.8%) and verbal
+> adverbs (5.3% to 1.4%).
+
+**Figure 6 caption.** Replace with:
+
+> Figure 6: Rank of the ten most frequent part-of-speech tags in each translation (1 = most
+> frequent). Verbs rank first in every translation except the 1911 Engel'gardt, where nouns do.
+
+**Executive Summary.** Replace "the 1960 Daruzes translation uniquely inverts the standard
+grammatical hierarchy by prioritizing verbs over nouns" with:
+
+> the 1911 Engel'gardt translation is the only one in which nouns outnumber lexical verbs, while the
+> 1960 Daruzes translation has the highest proportion of verbs to nouns
+
+**Discussion & Recommendations.** Replace "The most notable divergence occurs in the 1960 Daruzes
+text. By statistically inverting the standard noun verb rankings and creating a more dynamic if less
+lexically rich translation, Daruzes alters the topology of the novel." with:
+
+> The part-of-speech profiles shift with time: the 1911 translation is the only one with more nouns
+> than lexical verbs, and the share of verbs relative to nouns is highest in the 1949 Braude and 1960 Daruzes
+> translations.
+
+In the final paragraph, replace "the 1960 Daruzes translation is the most grammatically dynamic"
+with "the 1960 Daruzes translation has the highest proportion of verbs to nouns". In the table of
+visualizations, the Part-of-Speech Heatmap entry ("The hierarchical priority of grammatical forms")
+can stay.
 
 ## 7. Classic Stylometric Measures
 
 To be completed. Carried over from 4.7: quantify the effect of the old fusion of hyphenated words on
-the lexical-richness numbers, and confirm the impact level.
+the lexical-richness numbers, and confirm the impact level. Carried over from 6.3: decide the sentence
+segmentation (Stanza or razdel) for average sentence length.
 
 ## 8. Delta, Clustering and Embedding
 
@@ -467,3 +610,13 @@ To be completed.
    Information Science 542, 320–332 (2015). Used via pymorphy3 2.0.6.
 5. Milo, R. et al. Superfamilies of evolved and designed networks. *Science* 303, 1538–1542 (2004).
    Source of the significance-profile method.
+6. Qi, P., Zhang, Y., Zhang, Y., Bolton, J. & Manning, C. D. Stanza: A Python Natural Language
+   Processing Toolkit for Many Human Languages. In *Proceedings of the 58th Annual Meeting of the
+   Association for Computational Linguistics: System Demonstrations*, 101–108 (2020). Used: version
+   1.15.0.
+7. Honnibal, M., Montani, I., Van Landeghem, S. & Boyd, A. spaCy: Industrial-strength Natural
+   Language Processing in Python. Zenodo, doi:10.5281/zenodo.1212303 (2020). Used: version 3.8.16,
+   model `ru_core_news_lg` 3.8.0.
+8. Nivre, J. et al. Universal Dependencies v2: An Evergrowing Multilingual Treebank Collection. In
+   *Proceedings of the 12th Language Resources and Evaluation Conference (LREC 2020)*, 4034–4043
+   (2020).
