@@ -1,0 +1,119 @@
+# Pipeline configuration. Every parameter and list used by the pipeline lives here.
+# Paths are relative to the repository root.
+
+[paths]
+raw_dir = "data/raw"
+clean_dir = "data/interim/clean"
+review_dir = "data/interim/clean/review"
+manual_corrections = "data/corrections/manual.tsv"
+cleaning_report = "docs/cleaning/cleaning_report.md"
+
+[corpus]
+texts = ["Ru1", "Ru2", "Ru3", "Ru4", "Ru5"]
+
+[corpus.labels]
+Ru1 = "Ru-1911-Engelgardt"
+Ru2 = "Ru-1926-Anon"
+Ru3 = "Ru-1933-Chukovsky-(Ed.)"
+Ru4 = "Ru-1949-Braude"
+Ru5 = "Ru-1960-Daruzes"
+
+# --- Cleaning -----------------------------------------------------------------
+
+[clean]
+encoding = "utf-8-sig"       # strips the BOM
+unicode_form = "NFC"
+log_context_chars = 30       # characters of context either side of a change in Ru#_changes.tsv
+report_excerpt_chars = 100   # max characters of any text line quoted in the committed report
+
+# Rule b. Front matter removed by text match. A block runs from the first line whose
+# stripped text starts with `first`, through the next line (inclusive) whose stripped
+# text starts with `last`. Each block must be found exactly once, or the run fails.
+[[clean.front_matter]]
+text = "Ru1"
+name = "Notice"
+first = "За покушение отыскать побудительную причину"
+last = "За покушение отыскать побудительную причину"
+
+[[clean.front_matter]]
+text = "Ru5"
+name = "Notice"
+first = "ПРЕДУПРЕЖДЕНИЕ"
+last = "По приказу автора"
+
+[[clean.front_matter]]
+text = "Ru5"
+name = "Explanatory"
+first = "ОБЪЯСНЕНИЕ"
+last = "АВТОР"
+
+# Rule b, report only: lines proposed for trimming (never removed automatically).
+[clean.front_back_proposals]
+scan_lines = 15              # non-empty lines inspected at each end of each text
+max_chars = 60               # only lines this short or shorter are considered
+# A short line is proposed if it contains a keyword or is all caps.
+keywords = ["Конец", "КОНЕЦ", "Глава", "ГЛАВА", "Перевод", "перевод", "Издательство", "издательство",
+            "Марк Твен", "МАРК ТВЕН", "почтением", "слуга", "Гек Финн", "ГЕК ФИНН"]
+
+# Rule c. Bracketed segments containing the marker are removed; all others are listed.
+[clean.editorial_notes]
+open = "["
+close = "]"
+marker = "Прим."
+
+# Rule e. Latin look-alikes mapped to Cyrillic inside tokens with at least one Cyrillic letter.
+[clean.latin_lookalikes]
+a = "а"
+e = "е"
+o = "о"
+p = "р"
+c = "с"
+x = "х"
+y = "у"
+k = "к"
+A = "А"
+B = "В"
+E = "Е"
+K = "К"
+M = "М"
+H = "Н"
+O = "О"
+P = "Р"
+C = "С"
+T = "Т"
+X = "Х"
+
+# Rule f. Standalone token replacements.
+[clean.standalone_tokens]
+II = "И"
+
+# Rule g. Canonical punctuation.
+[clean.punctuation]
+dash = "—"
+double_hyphen = "--"                     # two or more hyphen-minus in a row
+spaced_dashes = ["–", "—", "-"]          # mapped to the canonical dash when spaces are on both sides
+quote_chars = ["\"", "„", "“", "”", "'", "‘", "’"]
+open_quote = "«"
+close_quote = "»"
+# A quote character is opening when preceded by start of line, whitespace or one of these:
+opening_after = ["(", "[", "—", "–", "-", "«", "/"]
+ellipsis_min_dots = 3                    # a run of this many or more full stops becomes the ellipsis
+ellipsis_to = "…"
+comma_runs = true                        # ",," (or longer) collapsed to ","
+
+# Rule h. Broken hyphenation ("word - particle", "по - X") rejoined.
+[clean.hyphenation]
+particles = ["то", "либо", "нибудь", "ка", "таки"]
+po_word = "по"
+po_suffixes = ["ому", "ему", "ски", "цки", "ьи"]
+
+# Rule i. Dictionary-based split-word repair (pymorphy3 word_is_known).
+[clean.split_words]
+# Pairs A B are joined when AB is a dictionary word and A or B is not; repeated until no change.
+sample_size = 50            # joins per text sampled for manual review
+seed = 20261019              # random seed for the review sample
+
+# Rule j.
+[clean.yo]
+"ё" = "е"
+"Ё" = "Е"

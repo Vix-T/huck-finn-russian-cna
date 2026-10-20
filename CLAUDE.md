@@ -20,8 +20,8 @@ network analysis (word-adjacency networks, 3-node motifs, betweenness).
 - METHODS.md (added later) is the source of truth for methods. If a decision
   isn't covered by it, stop and ask. Never choose a method silently.
 - Work one stage at a time. Do only the task you were given; don't start the next.
-- Use the project .venv only. Never install packages globally. Keep the pinned
-  dependency file current.
+- Use the project .venv only, managed by uv (pyproject.toml + uv.lock; `uv add`,
+  `uv run`). Never install packages globally. Keep uv.lock current.
 - All parameters live in one config file once it exists. No magic numbers in code.
 - Seed all randomness and record the seeds.
 - Never commit raw texts. Commit code, configs, tests and docs.
@@ -31,5 +31,8 @@ network analysis (word-adjacency networks, 3-node motifs, betweenness).
   uncertain.
 
 ## Language notes
-Texts are Russian, UTF-8. Preserve ё, hyphenated words, dashes and punctuation
-in anything read from data/raw/. Sentence splitting happens on original-case text.
+Texts are Russian, UTF-8. When reading data/raw/, ё, hyphenated words, dashes and
+punctuation are preserved exactly; only the cleaning stage changes them, by the
+rules in docs/decisions.md. The cleaned texts in data/interim/clean/ (produced by
+`uv run python -m huckfinn_cna.clean`) are the source for every later stage.
+Sentence splitting happens on original-case text.

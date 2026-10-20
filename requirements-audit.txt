@@ -1,2 +1,0 @@
-# Audit environment: Python 3.12.15 (uv-managed), created with: uv venv --python 3.12 .venv
-razdel==0.5.0
