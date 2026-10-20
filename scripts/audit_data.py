@@ -2,7 +2,8 @@
 
 Reads data/raw/Ru1.txt .. Ru5.txt (never writes to them) and the old repo
 (read-only, including read-only `git show` of committed snapshots), and writes
-docs/audit/data_audit.md and docs/audit/data_audit.json.
+docs/audit/data_audit.md, docs/audit/data_audit.json and one
+docs/audit/old_mfinder_zscores_<run>.csv per mfinder run found.
 
 Usage:
     .venv/bin/python scripts/audit_data.py
@@ -10,6 +11,7 @@ Usage:
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import re
@@ -17,6 +19,7 @@ import statistics
 import subprocess
 import unicodedata
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 from razdel import sentenize
@@ -45,9 +48,18 @@ FRONT_BACK_MAX_CHARS = 200
 PER_N_WORDS = 1000
 
 MFINDER_PATTERNS = ("*_OUT.txt", "*_MEMBERS.txt", "*_mfinder_input.txt")
+# OUT file suffix -> run name. Members files also end in _OUT.txt, so they are matched first.
+MFINDER_RUNS = {"_mfinder_input_OUT.txt": "input_OUT", "_mfinder_stats_OUT.txt": "stats_OUT"}
+MEMBERS_SUFFIXES = ("_members_OUT.txt", "_MEMBERS.txt")
 ZSCORE_SENTINEL = 888888.0
 ZSCORE_SUSPECT_ABOVE = 1000.0
 MEMBERS_CAP = 1000
+WEIGHT_BINS = ((1, 1), (2, 2), (3, 5), (6, 10), (11, None))  # inclusive; None = no upper bound
+ZSCORE_CSV_STEM = "old_mfinder_zscores"
+FIGURE9_COMPARISON = (
+    "**Not done.** Figure 9 is an image, and the Read tool cannot render PDF pages in this environment "
+    "(`pdftoppm` from poppler is not installed). The values have not been compared yet."
+)
 
 # --- Character classes -----------------------------------------------------
 
@@ -298,48 +310,99 @@ def audit_text(path: Path, label: str) -> dict:
 # --- Old mfinder outputs (read-only) ---------------------------------------
 
 
+def classify_mfinder_file(name: str) -> str | None:
+    if name.endswith(MEMBERS_SUFFIXES):
+        return "members"
+    if name.endswith(tuple(MFINDER_RUNS)):
+        return "out"
+    if name.endswith("_mfinder_input.txt"):
+        return "input"
+    return None
+
+
+def mfinder_run(name: str) -> str:
+    return next(run for suffix, run in MFINDER_RUNS.items() if name.endswith(suffix))
+
+
+def text_id(name: str) -> str:
+    return name.split("_")[0]
+
+
 def parse_edges(content: str) -> list[tuple[str, ...]]:
     return [tuple(ln.split()) for ln in content.splitlines() if ln.strip()]
+
+
+def weight_bin_label(lo: int, hi: int | None) -> str:
+    if hi is None:
+        return f"{lo}+"
+    return f"{lo}" if lo == hi else f"{lo}-{hi}"
+
+
+def weight_distribution(weights: list[float]) -> dict:
+    return {
+        "bins": {
+            weight_bin_label(lo, hi): sum(1 for w in weights if w >= lo and (hi is None or w <= hi))
+            for lo, hi in WEIGHT_BINS
+        },
+        "mean": round(statistics.fmean(weights), 3) if weights else None,
+        "median": statistics.median(weights) if weights else None,
+        "max": max(weights, default=None),
+    }
 
 
 def audit_mfinder_input(content: str) -> dict:
     edges = parse_edges(content)
     pairs = Counter((e[0], e[1]) for e in edges if len(e) >= 2)
-    weights = [e[2] for e in edges if len(e) >= 3]
     duplicates = {f"{s} {t}": n for (s, t), n in pairs.items() if n > 1}
-    numeric = [float(w) for w in weights]
+    weights = [float(e[2]) for e in edges if len(e) >= 3]
     return {
         "edges": len(edges),
+        "nodes": len({n for pair in pairs for n in pair}),
         "malformed_rows": sum(1 for e in edges if len(e) != 3),
         "duplicate_pairs": len(duplicates),
         "duplicate_examples": dict(list(duplicates.items())[:MAX_EXAMPLES]),
         "self_loops": sum(1 for s, t in pairs if s == t),
-        "weights_all_one": bool(numeric) and all(w == 1 for w in numeric),
-        "weights_not_one": sum(1 for w in numeric if w != 1),
-        "weight_max": max(numeric, default=None),
-        "nodes": len({n for pair in pairs for n in pair}),
+        "weights_all_one": bool(weights) and all(w == 1 for w in weights),
+        "weights": weight_distribution(weights),
     }
 
 
-def parse_out_zscores(content: str) -> dict[int, float]:
-    """Motif ID -> Z-score, same layout as the old 21z-score_heatmap script expects."""
-    data = {}
+OUT_META_PATTERNS = {
+    "nodes": r"Num of Nodes:\s*(\d+)",
+    "edges": r"Num of Edges:\s*(\d+)",
+    "random_networks": r"Number of random networks generated\s*:\s*(\d+)",
+    "criteria_zscore": r"Criteria taken\s*:\s*Nreal Zscore\s*>\s*([-\d.]+)",
+    "motifs_passing_criteria": r"Full list includes (\d+) motifs",
+    "total_runtime": r"Application total runtime was:\s*([\d.]+\s*\w+)",
+    "single_random_runtime": r"Single Random network processing runtime was:\s*([\d.]+\s*\w+)",
+}
+
+
+def parse_out(content: str) -> dict:
+    """Header metadata plus the 'Full list of subgraphs' table (ID NREAL NRAND+-STD Z PVAL CREAL UNIQ)."""
+    meta = {}
+    for key, pattern in OUT_META_PATTERNS.items():
+        match = re.search(pattern, content)
+        meta[key] = match.group(1) if match else None
+    motifs = {}
     in_block = False
     for line in content.splitlines():
         line = line.strip()
-        if not line:
-            continue
         if "Full list of subgraphs size" in line:
             in_block = True
             continue
-        if in_block and line[0].isdigit():
-            parts = line.split()
-            if len(parts) >= 4:
-                try:
-                    data[int(parts[0])] = float(parts[3])
-                except ValueError:
-                    continue
-    return data
+        parts = line.split()
+        if not in_block or len(parts) < 5 or not parts[0].isdigit() or "+-" not in parts[2]:
+            continue
+        try:
+            mean, std = (float(x) for x in parts[2].split("+-"))
+            motifs[int(parts[0])] = {
+                "nreal": int(parts[1]), "nrand_mean": mean, "nrand_std": std,
+                "z": float(parts[3]), "pval": float(parts[4]),
+            }
+        except ValueError:
+            continue
+    return {"meta": meta, "motifs": motifs}
 
 
 def flag_zscores(zscores: dict[int, float]) -> list[dict]:
@@ -350,9 +413,9 @@ def flag_zscores(zscores: dict[int, float]) -> list[dict]:
     ]
 
 
-def parse_members(content: str) -> dict[str, int]:
-    """Motif ID -> number of member rows, same layout as the old 19parse script expects."""
-    counts: Counter = Counter()
+def parse_members(content: str) -> dict[str, dict]:
+    """Motif ID -> count in the 'list of N members:' header, member rows, and distinct node triples."""
+    found: dict[str, dict] = {}
     current = None
     started = False
     for line in content.splitlines():
@@ -360,14 +423,27 @@ def parse_members(content: str) -> dict[str, int]:
         if line.startswith("subgraph id ="):
             parts = line.split()
             current = parts[3] if len(parts) == 4 else None
+            if current:
+                found[current] = {"header_n": None, "rows": 0, "node_sets": set()}
             started = False
             continue
-        if "members:" in line:
+        if "members:" in line and current:
+            match = re.search(r"list of (\d+) members", line)
+            found[current]["header_n"] = int(match.group(1)) if match else None
             started = True
             continue
-        if started and current and len(line.split()) == 3:
-            counts[current] += 1
-    return dict(counts)
+        parts = line.split()
+        if started and current and len(parts) == 3:
+            found[current]["rows"] += 1
+            found[current]["node_sets"].add(frozenset(parts))
+    return {
+        m: {"header_n": v["header_n"], "rows": v["rows"], "unique_node_sets": len(v["node_sets"])}
+        for m, v in found.items()
+    }
+
+
+def at_members_cap(entry: dict) -> bool:
+    return MEMBERS_CAP in (entry["header_n"], entry["rows"], entry["unique_node_sets"])
 
 
 def git(*args: str) -> str:
@@ -381,13 +457,19 @@ def matches_mfinder_pattern(name: str) -> bool:
 
 
 def find_mfinder_files() -> dict:
-    """Working-tree files, plus the latest committed snapshot of each matching path."""
-    working_tree = sorted(
-        str(p.relative_to(OLD_REPO))
-        for pattern in MFINDER_PATTERNS
-        for p in OLD_REPO.rglob(pattern)
-        if ".git" not in p.parts
+    """Working-tree files with modification dates, plus the latest committed snapshot of each path."""
+    paths = sorted(
+        {p for pattern in MFINDER_PATTERNS for p in OLD_REPO.rglob(pattern) if ".git" not in p.parts}
     )
+    working_tree = [
+        {
+            "path": str(p.relative_to(OLD_REPO)),
+            "kind": classify_mfinder_file(p.name),
+            "modified": datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
+            "bytes": p.stat().st_size,
+        }
+        for p in paths
+    ]
     history: dict[str, dict] = {}
     log = git("log", "--all", "--format=@%H %ad", "--date=short", "--name-status")
     commit = date = None
@@ -400,33 +482,84 @@ def find_mfinder_files() -> dict:
     return {"working_tree": working_tree, "history": dict(sorted(history.items()))}
 
 
-def read_mfinder_file(path: str, found: dict) -> tuple[str, str]:
-    if path in found["working_tree"]:
-        return (OLD_REPO / path).read_text(encoding="utf-8"), "working tree"
-    snap = found["history"][path]
-    return git("show", f"{snap['commit']}:{path}"), f"git {snap['commit'][:7]} ({snap['date']})"
+def git_snapshot(path: str, snap: dict) -> bytes:
+    return subprocess.run(
+        ["git", "-C", str(OLD_REPO), "show", f"{snap['commit']}:{path}"], check=True, capture_output=True
+    ).stdout
 
 
 def audit_mfinder() -> dict:
     found = find_mfinder_files()
-    tag = git("tag", "-l").split()
-    result = {"old_repo": str(OLD_REPO), "tags": tag, "found": found, "inputs": {}, "out": {}, "members": {}}
-    for path in sorted(set(found["working_tree"]) | set(found["history"])):
-        content, source = read_mfinder_file(path, found)
-        name = Path(path).name
-        if name.endswith("_mfinder_input.txt"):
-            result["inputs"][name] = {"source": source, **audit_mfinder_input(content)}
-        elif name.endswith("_OUT.txt"):
-            z = parse_out_zscores(content)
-            result["out"][name] = {"source": source, "motifs": len(z), "flagged": flag_zscores(z)}
-        elif name.endswith("_MEMBERS.txt"):
-            m = parse_members(content)
+    result = {
+        "old_repo": str(OLD_REPO), "tags": git("tag", "-l").split(), "found": found,
+        "inputs": {}, "out": {}, "members": {},
+    }
+    history_by_name = {Path(p).name: (p, snap) for p, snap in found["history"].items()}
+
+    for f in found["working_tree"]:
+        name = Path(f["path"]).name
+        raw = (OLD_REPO / f["path"]).read_bytes()
+        content = raw.decode("utf-8")
+        if f["kind"] == "input":
+            entry = {"source": f["path"], "sha256": hashlib.sha256(raw).hexdigest(), **audit_mfinder_input(content)}
+            if name in history_by_name:
+                hpath, snap = history_by_name[name]
+                entry["git_snapshot"] = f"{snap['commit'][:7]} ({snap['date']})"
+                entry["identical_to_git_snapshot"] = git_snapshot(hpath, snap) == raw
+            result["inputs"][name] = entry
+        elif f["kind"] == "out":
+            parsed = parse_out(content)
+            zscores = {m: row["z"] for m, row in parsed["motifs"].items()}
+            result["out"][name] = {
+                "source": f["path"], "text": text_id(name), "run": mfinder_run(name),
+                **parsed, "flagged": flag_zscores(zscores),
+            }
+        elif f["kind"] == "members":
+            members = parse_members(content)
             result["members"][name] = {
-                "source": source,
-                "members_per_motif": m,
-                "motifs_at_cap": [k for k, v in m.items() if v == MEMBERS_CAP],
+                "source": f["path"], "text": text_id(name), "members_per_motif": members,
+                "motifs_at_cap": [m for m, v in members.items() if at_members_cap(v)],
+            }
+
+    # Inputs that exist only in git history are still audited from the snapshot.
+    for name, (hpath, snap) in history_by_name.items():
+        if classify_mfinder_file(name) == "input" and name not in result["inputs"]:
+            result["inputs"][name] = {
+                "source": f"git {snap['commit'][:7]} ({snap['date']})",
+                **audit_mfinder_input(git_snapshot(hpath, snap).decode("utf-8")),
             }
     return result
+
+
+def zscore_table(mfinder: dict, run: str) -> tuple[list[int], list[dict]]:
+    """Rows of (text, label, file, Z per motif) for one run, ordered by text."""
+    labels = {Path(name).stem: label for name, label in TEXTS}
+    outs = sorted((o for o in mfinder["out"].values() if o["run"] == run), key=lambda o: o["text"])
+    motifs = sorted({m for o in outs for m in o["motifs"]})
+    rows = [
+        {"text": o["text"], "label": labels.get(o["text"], ""), "file": Path(o["source"]).name,
+         "z": {m: o["motifs"].get(m, {}).get("z") for m in motifs}}
+        for o in outs
+    ]
+    return motifs, rows
+
+
+def mfinder_runs(mfinder: dict) -> list[str]:
+    return sorted({o["run"] for o in mfinder["out"].values()})
+
+
+def write_zscore_csvs(mfinder: dict) -> list[Path]:
+    paths = []
+    for run in mfinder_runs(mfinder):
+        motifs, rows = zscore_table(mfinder, run)
+        path = AUDIT_DIR / f"{ZSCORE_CSV_STEM}_{run}.csv"
+        with path.open("w", encoding="utf-8", newline="") as fh:
+            writer = csv.writer(fh)
+            writer.writerow(["text", "label", "file"] + [f"motif_{m}" for m in motifs])
+            for r in rows:
+                writer.writerow([r["text"], r["label"], r["file"]] + [r["z"][m] for m in motifs])
+        paths.append(path)
+    return paths
 
 
 # --- Markdown report -------------------------------------------------------
@@ -546,44 +679,116 @@ def render_markdown(texts: list[dict], mfinder: dict) -> str:
 
 def render_mfinder_markdown(m: dict) -> list[str]:
     f = m["found"]
-    L = ["## Old mfinder outputs (read-only)", "", f"Repo: `{m['old_repo']}`. Tags present: "
-         + (", ".join(m["tags"]) if m["tags"] else "**none**") + ".", ""]
-    L += ["### Files found", "", "Working tree:", ""]
-    L += [f"- `{p}`" for p in f["working_tree"]] or ["- none"]
+    L = ["## Old mfinder outputs (read-only)", "",
+         f"Repo: `{m['old_repo']}`. Tags present: " + (", ".join(m["tags"]) if m["tags"] else "**none**") + ".",
+         "Files were only read; git snapshots were read with `git show`.", ""]
+
+    L += ["### Files found", "", "Working tree (modified = filesystem mtime):", ""]
+    if f["working_tree"]:
+        L.append(md_table(["Path", "Kind", "Modified", "Bytes"],
+                          [[f"`{w['path']}`", w["kind"], w["modified"], w["bytes"]] for w in f["working_tree"]]))
+    else:
+        L.append("- none")
     L += ["", "Git history (latest commit that added or modified each path):", ""]
     L += [f"- `{p}` — {v['commit'][:7]} ({v['date']})" for p, v in f["history"].items()] or ["- none"]
-    for kind in ("OUT", "MEMBERS"):
-        if not any(Path(p).name.endswith(f"_{kind}.txt") for p in [*f["working_tree"], *f["history"]]):
-            L += ["", f"**No `*_{kind}.txt` files exist** in the working tree or in git history."]
+    L += ["", "Naming patterns:", "",
+          "- `*_mfinder_input.txt`: edge lists (source, target, weight) given to mfinder.",
+          "- `*_mfinder_input_OUT.txt`: mfinder summary from one run (listing criteria Z > 2, Mfactor > 1.1,",
+          "  uniqueness ≥ 4). The name is mfinder's default `<input>_OUT.txt`.",
+          "- `*_mfinder_stats_OUT.txt`: mfinder summary from a second run (criteria Z > 0, Mfactor > 0,",
+          "  uniqueness ≥ 0, so every over-represented motif is listed with its adjacency matrix).",
+          "- `*_mfinder_members_OUT.txt`: member lists (`-omem`) written alongside the second run;",
+          "  dates match `stats_OUT`. No `*_MEMBERS.txt` files exist.",
+          "",
+          "The two OUT files per text are **separate runs** on the same network: NREAL is identical but the",
+          "random-network means, SDs and therefore Z-scores differ, and runtimes and dates differ."]
 
     L += ["", "### Input files", ""]
     if m["inputs"]:
+        bins = [weight_bin_label(lo, hi) for lo, hi in WEIGHT_BINS]
         L.append(md_table(
-            ["File", "Source", "Edges", "Nodes", "Malformed rows", "Duplicate pairs", "Self-loops",
-             "Weights all 1", "Weights ≠ 1", "Max weight"],
-            [[k, v["source"], v["edges"], v["nodes"], v["malformed_rows"], v["duplicate_pairs"],
-              v["self_loops"], v["weights_all_one"], v["weights_not_one"], v["weight_max"]]
+            ["File", "Edges", "Nodes", "Malformed", "Dup. pairs", "Self-loops", "Weights all 1",
+             "Weight mean / median / max"] + [f"w = {b}" for b in bins] + ["Identical to git snapshot"],
+            [[k, v["edges"], v["nodes"], v["malformed_rows"], v["duplicate_pairs"], v["self_loops"],
+              v["weights_all_one"], f"{v['weights']['mean']} / {v['weights']['median']} / {v['weights']['max']}"]
+             + [v["weights"]["bins"][b] for b in bins]
+             + [f"{v['identical_to_git_snapshot']} ({v['git_snapshot']})" if "git_snapshot" in v else "n/a"]
              for k, v in m["inputs"].items()],
         ))
     else:
         L.append("None found.")
 
-    L += ["", "### OUT files: Z-scores = 888888 or |Z| > 1000", ""]
-    if m["out"]:
+    if not m["out"]:
+        L += ["", "### OUT files", "", "Not checked: no OUT files found."]
+    else:
+        L += ["", "### OUT files: run settings", ""]
+        L.append(md_table(
+            ["File", "Run", "Nodes", "Edges", "Random networks", "Listing criterion Z >", "Motifs listed",
+             "Total runtime", "Per random network"],
+            [[k, v["run"], v["meta"]["nodes"], v["meta"]["edges"], v["meta"]["random_networks"],
+              v["meta"]["criteria_zscore"], v["meta"]["motifs_passing_criteria"], v["meta"]["total_runtime"],
+              v["meta"]["single_random_runtime"]] for k, v in m["out"].items()],
+        ))
+        L += ["", "### OUT files: Z = 888888 or |Z| > 1000", ""]
         for k, v in m["out"].items():
             flagged = ", ".join(f"motif {x['motif']}: {x['z']}" for x in v["flagged"]) or "none"
-            L.append(f"- `{k}` ({v['source']}, {v['motifs']} motifs): {flagged}")
-    else:
-        L.append("Not checked: no OUT files found.")
+            L.append(f"- `{k}` ({len(v['motifs'])} motifs): {flagged}")
 
-    L += ["", f"### MEMBERS files: members per motif (cap {MEMBERS_CAP})", ""]
+        tables = {run: zscore_table(m, run) for run in mfinder_runs(m)}
+        for run, (motifs, rows) in tables.items():
+            L += ["", f"### Z-scores, run `{run}` (`docs/audit/{ZSCORE_CSV_STEM}_{run}.csv`)", ""]
+            L.append(md_table(["Motif"] + [r["label"] for r in rows],
+                              [[mid] + [r["z"][mid] for r in rows] for mid in motifs]))
+        if len(tables) == 2:
+            (run_a, (motifs, rows_a)), (run_b, (_, rows_b)) = tables.items()
+            L += ["", f"### Z-score difference between runs (`{run_b}` − `{run_a}`)", ""]
+            deltas = [[zscore_delta(b["z"].get(mid), a["z"].get(mid)) for a, b in zip(rows_a, rows_b)]
+                      for mid in motifs]
+            L.append(md_table(
+                ["Motif"] + [r["label"] for r in rows_a],
+                [[mid] + [fmt_delta(d) for d in row] for mid, row in zip(motifs, deltas)]
+                + [["max \\|Δ\\|"] + [max((abs(row[i]) for row in deltas if row[i] is not None), default="")
+                                       for i in range(len(rows_a))]],
+            ))
+
+    L += ["", "### Comparison with Figure 9 of `Final Report 3.pdf`", "", FIGURE9_COMPARISON]
+
+    L += ["", f"### MEMBERS files: members per motif (cap {MEMBERS_CAP})", "",
+          "Each cell: count in mfinder's `Partial list of N members:` header / member rows listed /",
+          "distinct unordered node triples among those rows.", ""]
     if m["members"]:
-        for k, v in m["members"].items():
-            per = ", ".join(f"{mid}: {n}" for mid, n in v["members_per_motif"].items())
-            L.append(f"- `{k}` ({v['source']}): {per}; at cap: {', '.join(v['motifs_at_cap']) or 'none'}")
+        files = list(m["members"])
+        motif_ids = sorted({mid for v in m["members"].values() for mid in v["members_per_motif"]}, key=int)
+        L.append(md_table(
+            ["Motif"] + [m["members"][k]["text"] for k in files],
+            [[mid] + [members_cell(m["members"][k]["members_per_motif"].get(mid)) for k in files]
+             for mid in motif_ids],
+        ))
+        L.append("")
+        L += [f"- `{k}`: motifs at exactly {MEMBERS_CAP}: {', '.join(m['members'][k]['motifs_at_cap']) or 'none'}"
+              for k in files]
+        same = [mid for mid in motif_ids
+                if len({members_cell(m["members"][k]["members_per_motif"].get(mid)) for k in files}) == 1]
+        L += ["", f"Motifs whose member counts are identical in all {len(files)} texts: "
+              f"{len(same)} of {len(motif_ids)}. Since NREAL is in the thousands to millions and the header says",
+              "`Partial list`, these lists are truncated samples, not complete member sets. The counts fit",
+              "1001 × 6/|Aut(motif)| (e.g. 238, fully mutual triad, 6 automorphisms → 1001; 38, feed-forward",
+              "loop, 1 automorphism → 6006); that mechanism is inferred, not verified in mfinder's source."]
     else:
         L.append("Not checked: no MEMBERS files found.")
     return L + [""]
+
+
+def zscore_delta(b: float | None, a: float | None) -> float | None:
+    return None if a is None or b is None else round(b - a, 2)
+
+
+def fmt_delta(d: float | None) -> str:
+    return "" if d is None else f"{d:+.2f}"
+
+
+def members_cell(entry: dict | None) -> str:
+    return "" if entry is None else f"{entry['header_n']} / {entry['rows']} / {entry['unique_node_sets']}"
 
 
 # --- Main ------------------------------------------------------------------
@@ -598,7 +803,8 @@ def main() -> None:
         encoding="utf-8",
     )
     (AUDIT_DIR / "data_audit.md").write_text(render_markdown(texts, mfinder), encoding="utf-8")
-    print(f"Wrote {AUDIT_DIR / 'data_audit.md'} and data_audit.json")
+    csvs = write_zscore_csvs(mfinder)
+    print(f"Wrote {AUDIT_DIR / 'data_audit.md'}, data_audit.json and {', '.join(p.name for p in csvs)}")
 
 
 if __name__ == "__main__":

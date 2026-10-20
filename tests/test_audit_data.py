@@ -90,28 +90,52 @@ class MfinderTests(unittest.TestCase):
         self.assertEqual(result["duplicate_pairs"], 1)
         self.assertEqual(result["self_loops"], 1)
         self.assertFalse(result["weights_all_one"])
-        self.assertEqual(result["weights_not_one"], 1)
+        self.assertEqual(result["weights"]["bins"], {"1": 3, "2": 0, "3-5": 1, "6-10": 0, "11+": 0})
+        self.assertEqual(result["weights"]["max"], 4.0)
+
+    def test_classify_members_before_out(self):
+        self.assertEqual(a.classify_mfinder_file("Ru1_mfinder_members_OUT.txt"), "members")
+        self.assertEqual(a.classify_mfinder_file("Ru1_mfinder_stats_OUT.txt"), "out")
+        self.assertEqual(a.classify_mfinder_file("Ru1_mfinder_input.txt"), "input")
+        self.assertEqual(a.mfinder_run("Ru1_mfinder_input_OUT.txt"), "input_OUT")
 
     def test_out_parsing_and_flags(self):
         content = (
-            "header\nFull list of subgraphs size 3 ids:\n"
-            "MOTIF NREAL NRAND NREAL_ZSCORE\n"
-            "6 100 50.0+-5.0 10.00 0.00\n"
-            "38 5 0.0+-0.0 888888.00 0.00\n"
-            "98 9 1.0+-0.1 2500.5 0.00\n"
+            "\tNum of Nodes: 10 Num of Edges: 20\n"
+            "\tNumber of random networks generated : 100\n"
+            "Criteria taken : Nreal Zscore > 2.00\n"
+            "Full list includes 1 motifs\n"
+            "6\t100\t50.0+-5.0\t9.00\t0.000\t3\t1.0\n"  # found-motifs block: ignored
+            "Full list of subgraphs size 3 ids:\n"
+            "MOTIF\tNREAL\tNRAND\n"
+            "6\t100\t50.0+-5.0\t10.00\t0.000\t1.5\t3\n"
+            "38\t5\t0.0+-0.0\t888888.00\t0.000\t0.1\t1\n"
+            "98\t9\t1.0+-0.1\t-2500.5\t1.000\t0.2\t2\n"
+            " (Application total runtime was:  13.66 hours.)\n"
         )
-        z = a.parse_out_zscores(content)
-        self.assertEqual(z, {6: 10.0, 38: 888888.0, 98: 2500.5})
-        flagged = a.flag_zscores(z)
+        parsed = a.parse_out(content)
+        self.assertEqual({m: r["z"] for m, r in parsed["motifs"].items()}, {6: 10.0, 38: 888888.0, 98: -2500.5})
+        self.assertEqual(parsed["motifs"][6]["nrand_std"], 5.0)
+        self.assertEqual(parsed["meta"]["random_networks"], "100")
+        self.assertEqual(parsed["meta"]["criteria_zscore"], "2.00")
+        self.assertEqual(parsed["meta"]["total_runtime"], "13.66 hours")
+        flagged = a.flag_zscores({m: r["z"] for m, r in parsed["motifs"].items()})
         self.assertEqual([f["motif"] for f in flagged], [38, 98])
         self.assertTrue(flagged[0]["sentinel"])
 
     def test_members_parsing(self):
         content = (
-            "subgraph id = 6\nNreal: 2\nfull list of members:\n1 2 3\n4 5 6\n"
-            "subgraph id = 12\nfull list of members:\n7 8 9\n"
+            "subgraph id = 6\nNreal : 2\n=====\nPartial list of 3 members:\n\n"
+            "1\t2\t3\t\n3\t2\t1\t\n4\t5\t6\t\n"
+            "subgraph id = 12\nNreal : 1\n=====\nFull list of 1 members:\n7\t8\t9\t\n"
         )
-        self.assertEqual(a.parse_members(content), {"6": 2, "12": 1})
+        self.assertEqual(
+            a.parse_members(content),
+            {"6": {"header_n": 3, "rows": 3, "unique_node_sets": 2},
+             "12": {"header_n": 1, "rows": 1, "unique_node_sets": 1}},
+        )
+        self.assertTrue(a.at_members_cap({"header_n": 3003, "rows": 3003, "unique_node_sets": 1000}))
+        self.assertFalse(a.at_members_cap({"header_n": 3003, "rows": 3003, "unique_node_sets": 1001}))
 
 
 if __name__ == "__main__":

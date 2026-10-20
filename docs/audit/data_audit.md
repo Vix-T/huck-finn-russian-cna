@@ -457,13 +457,35 @@ Last non-empty lines:
 
 ## Old mfinder outputs (read-only)
 
-Repo: `/Users/vixtalbot/Code/nlp-descriptive-russian-translations`. Tags present: **none**.
+Repo: `/Users/vixtalbot/Code/nlp-descriptive-russian-translations`. Tags present: report-v3.
+Files were only read; git snapshots were read with `git show`.
 
 ### Files found
 
-Working tree:
+Working tree (modified = filesystem mtime):
 
-- none
+| Path | Kind | Modified | Bytes |
+|---|---|---|---|
+| `mfinder-analysis/Ru1_mfinder_input.txt` | input | 2025-07-22 14:42 | 794919 |
+| `mfinder-analysis/Ru1_mfinder_input_OUT.txt` | out | 2025-08-01 22:02 | 1884 |
+| `mfinder-analysis/Ru1_mfinder_members_OUT.txt` | members | 2025-10-23 21:44 | 838033 |
+| `mfinder-analysis/Ru1_mfinder_stats_OUT.txt` | out | 2025-10-23 21:44 | 2379 |
+| `mfinder-analysis/Ru2_mfinder_input.txt` | input | 2025-07-22 14:42 | 362899 |
+| `mfinder-analysis/Ru2_mfinder_input_OUT.txt` | out | 2025-10-12 14:53 | 1928 |
+| `mfinder-analysis/Ru2_mfinder_members_OUT.txt` | members | 2025-10-24 01:19 | 837456 |
+| `mfinder-analysis/Ru2_mfinder_stats_OUT.txt` | out | 2025-10-24 01:19 | 2348 |
+| `mfinder-analysis/Ru3_mfinder_input.txt` | input | 2025-07-22 14:42 | 467874 |
+| `mfinder-analysis/Ru3_mfinder_input_OUT.txt` | out | 2025-10-12 20:48 | 1877 |
+| `mfinder-analysis/Ru3_mfinder_members_OUT.txt` | members | 2025-10-24 05:35 | 833193 |
+| `mfinder-analysis/Ru3_mfinder_stats_OUT.txt` | out | 2025-10-24 05:35 | 2364 |
+| `mfinder-analysis/Ru4_mfinder_input.txt` | input | 2025-07-22 14:42 | 581838 |
+| `mfinder-analysis/Ru4_mfinder_input_OUT.txt` | out | 2025-10-14 03:18 | 1884 |
+| `mfinder-analysis/Ru4_mfinder_members_OUT.txt` | members | 2025-10-24 16:06 | 841255 |
+| `mfinder-analysis/Ru4_mfinder_stats_OUT.txt` | out | 2025-10-24 16:06 | 2374 |
+| `mfinder-analysis/Ru5_mfinder_input.txt` | input | 2025-07-22 14:42 | 595942 |
+| `mfinder-analysis/Ru5_mfinder_input_OUT.txt` | out | 2025-10-14 15:33 | 1882 |
+| `mfinder-analysis/Ru5_mfinder_members_OUT.txt` | members | 2025-10-25 01:12 | 830938 |
+| `mfinder-analysis/Ru5_mfinder_stats_OUT.txt` | out | 2025-10-25 01:12 | 2440 |
 
 Git history (latest commit that added or modified each path):
 
@@ -473,25 +495,145 @@ Git history (latest commit that added or modified each path):
 - `Ru4_mfinder_input.txt` — 22988a4 (2025-10-05)
 - `Ru5_mfinder_input.txt` — 22988a4 (2025-10-05)
 
-**No `*_OUT.txt` files exist** in the working tree or in git history.
+Naming patterns:
 
-**No `*_MEMBERS.txt` files exist** in the working tree or in git history.
+- `*_mfinder_input.txt`: edge lists (source, target, weight) given to mfinder.
+- `*_mfinder_input_OUT.txt`: mfinder summary from one run (listing criteria Z > 2, Mfactor > 1.1,
+  uniqueness ≥ 4). The name is mfinder's default `<input>_OUT.txt`.
+- `*_mfinder_stats_OUT.txt`: mfinder summary from a second run (criteria Z > 0, Mfactor > 0,
+  uniqueness ≥ 0, so every over-represented motif is listed with its adjacency matrix).
+- `*_mfinder_members_OUT.txt`: member lists (`-omem`) written alongside the second run;
+  dates match `stats_OUT`. No `*_MEMBERS.txt` files exist.
+
+The two OUT files per text are **separate runs** on the same network: NREAL is identical but the
+random-network means, SDs and therefore Z-scores differ, and runtimes and dates differ.
 
 ### Input files
 
-| File | Source | Edges | Nodes | Malformed rows | Duplicate pairs | Self-loops | Weights all 1 | Weights ≠ 1 | Max weight |
-|---|---|---|---|---|---|---|---|---|---|
-| Ru1_mfinder_input.txt | git 22988a4 (2025-10-05) | 67577 | 9822 | 0 | 0 | 0 | False | 12826 | 259.0 |
-| Ru2_mfinder_input.txt | git 22988a4 (2025-10-05) | 31254 | 5836 | 0 | 0 | 0 | False | 5528 | 124.0 |
-| Ru3_mfinder_input.txt | git 22988a4 (2025-10-05) | 40160 | 6665 | 0 | 0 | 0 | False | 7334 | 146.0 |
-| Ru4_mfinder_input.txt | git 22988a4 (2025-10-05) | 49719 | 7634 | 0 | 0 | 0 | False | 10627 | 298.0 |
-| Ru5_mfinder_input.txt | git 22988a4 (2025-10-05) | 51216 | 7335 | 0 | 0 | 0 | False | 10945 | 227.0 |
+| File | Edges | Nodes | Malformed | Dup. pairs | Self-loops | Weights all 1 | Weight mean / median / max | w = 1 | w = 2 | w = 3-5 | w = 6-10 | w = 11+ | Identical to git snapshot |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Ru1_mfinder_input.txt | 67577 | 9822 | 0 | 0 | 0 | False | 1.701 / 1.0 / 259.0 | 54751 | 6488 | 4137 | 1285 | 916 | True (22988a4 (2025-10-05)) |
+| Ru2_mfinder_input.txt | 31254 | 5836 | 0 | 0 | 0 | False | 1.528 / 1.0 / 124.0 | 25726 | 2971 | 1782 | 483 | 292 | True (22988a4 (2025-10-05)) |
+| Ru3_mfinder_input.txt | 40160 | 6665 | 0 | 0 | 0 | False | 1.569 / 1.0 / 146.0 | 32826 | 3861 | 2379 | 688 | 406 | True (22988a4 (2025-10-05)) |
+| Ru4_mfinder_input.txt | 49719 | 7634 | 0 | 0 | 0 | False | 1.841 / 1.0 / 298.0 | 39092 | 5290 | 3427 | 1132 | 778 | True (22988a4 (2025-10-05)) |
+| Ru5_mfinder_input.txt | 51216 | 7335 | 0 | 0 | 0 | False | 1.798 / 1.0 / 227.0 | 40271 | 5545 | 3543 | 1081 | 776 | True (22988a4 (2025-10-05)) |
 
-### OUT files: Z-scores = 888888 or |Z| > 1000
+### OUT files: run settings
 
-Not checked: no OUT files found.
+| File | Run | Nodes | Edges | Random networks | Listing criterion Z > | Motifs listed | Total runtime | Per random network |
+|---|---|---|---|---|---|---|---|---|
+| Ru1_mfinder_input_OUT.txt | input_OUT | 9822 | 67577 | 100 | 2.00 | 0 | 247.33 hours | 2.47 hours |
+| Ru1_mfinder_stats_OUT.txt | stats_OUT | 9822 | 67577 | 100 | 0.00 | 7 | 13.66 hours | 8.14 minutes |
+| Ru2_mfinder_input_OUT.txt | input_OUT | 5836 | 31254 | 100 | 2.00 | 1 | 2.61 hours | 1.56 minutes |
+| Ru2_mfinder_stats_OUT.txt | stats_OUT | 5836 | 31254 | 100 | 0.00 | 7 | 2.52 hours | 1.50 minutes |
+| Ru3_mfinder_input_OUT.txt | input_OUT | 6665 | 40160 | 100 | 2.00 | 0 | 5.73 hours | 3.42 minutes |
+| Ru3_mfinder_stats_OUT.txt | stats_OUT | 6665 | 40160 | 100 | 0.00 | 7 | 4.27 hours | 2.54 minutes |
+| Ru4_mfinder_input_OUT.txt | input_OUT | 7634 | 49719 | 100 | 2.00 | 0 | 10.82 hours | 6.46 minutes |
+| Ru4_mfinder_stats_OUT.txt | stats_OUT | 7634 | 49719 | 100 | 0.00 | 7 | 10.52 hours | 6.27 minutes |
+| Ru5_mfinder_input_OUT.txt | input_OUT | 7335 | 51216 | 100 | 2.00 | 0 | 9.26 hours | 5.52 minutes |
+| Ru5_mfinder_stats_OUT.txt | stats_OUT | 7335 | 51216 | 100 | 0.00 | 8 | 9.11 hours | 5.43 minutes |
+
+### OUT files: Z = 888888 or |Z| > 1000
+
+- `Ru1_mfinder_input_OUT.txt` (13 motifs): none
+- `Ru1_mfinder_stats_OUT.txt` (13 motifs): none
+- `Ru2_mfinder_input_OUT.txt` (13 motifs): none
+- `Ru2_mfinder_stats_OUT.txt` (13 motifs): none
+- `Ru3_mfinder_input_OUT.txt` (13 motifs): none
+- `Ru3_mfinder_stats_OUT.txt` (13 motifs): none
+- `Ru4_mfinder_input_OUT.txt` (13 motifs): none
+- `Ru4_mfinder_stats_OUT.txt` (13 motifs): none
+- `Ru5_mfinder_input_OUT.txt` (13 motifs): none
+- `Ru5_mfinder_stats_OUT.txt` (13 motifs): none
+
+### Z-scores, run `input_OUT` (`docs/audit/old_mfinder_zscores_input_OUT.csv`)
+
+| Motif | Ru-1911-Engelgardt | Ru-1926-Anon | Ru-1933-Chukovsky-(Ed.) | Ru-1949-Braude | Ru-1960-Daruzes |
+|---|---|---|---|---|---|
+| 6 | 5.3 | 6.28 | 4.96 | 11.18 | 6.94 |
+| 12 | 6.22 | 5.65 | 4.41 | 7.12 | 4.75 |
+| 14 | -6.29 | -1.45 | -3.98 | -2.95 | -4.15 |
+| 36 | 2.86 | 3.83 | 3.28 | 6.72 | 4.42 |
+| 38 | -5.92 | -6.13 | -5.68 | -10.85 | -7.84 |
+| 46 | 7.53 | 3.44 | 6.47 | 5.91 | 5.75 |
+| 74 | 0.18 | 2.77 | 0.6 | 5.03 | 0.49 |
+| 78 | -7.43 | -5.02 | -7.17 | -4.82 | -11.16 |
+| 98 | -4.59 | -2.92 | -1.66 | -0.15 | 0.12 |
+| 102 | -3.47 | -4.78 | -4.68 | -4.88 | -4.86 |
+| 108 | -1.34 | -2.49 | -0.65 | -5.01 | -1.15 |
+| 110 | 7.3 | 2.79 | 5.6 | 1.82 | 7.48 |
+| 238 | 4.87 | 5.24 | 4.99 | 5.25 | 9.61 |
+
+### Z-scores, run `stats_OUT` (`docs/audit/old_mfinder_zscores_stats_OUT.csv`)
+
+| Motif | Ru-1911-Engelgardt | Ru-1926-Anon | Ru-1933-Chukovsky-(Ed.) | Ru-1949-Braude | Ru-1960-Daruzes |
+|---|---|---|---|---|---|
+| 6 | 5.3 | 6.2 | 5.07 | 12.11 | 7.62 |
+| 12 | 5.7 | 5.25 | 4.39 | 6.91 | 4.68 |
+| 14 | -5.79 | -1.34 | -3.11 | -2.76 | -4.53 |
+| 36 | 2.87 | 4.15 | 3.39 | 7.27 | 4.57 |
+| 38 | -5.82 | -6.5 | -5.7 | -12.12 | -8.15 |
+| 46 | 6.9 | 3.75 | 5.59 | 5.04 | 6.17 |
+| 74 | 0.08 | 2.61 | 0.82 | 4.59 | 0.74 |
+| 78 | -8.46 | -5.11 | -5.76 | -4.81 | -10.9 |
+| 98 | -4.43 | -2.88 | -1.89 | -0.52 | 0.12 |
+| 102 | -2.87 | -4.35 | -4.29 | -4.59 | -4.75 |
+| 108 | -1.24 | -2.42 | -0.76 | -4.73 | -1.54 |
+| 110 | 8.76 | 3.01 | 4.94 | 2.07 | 7.75 |
+| 238 | 5.03 | 5.01 | 4.73 | 5.34 | 8.09 |
+
+### Z-score difference between runs (`stats_OUT` − `input_OUT`)
+
+| Motif | Ru-1911-Engelgardt | Ru-1926-Anon | Ru-1933-Chukovsky-(Ed.) | Ru-1949-Braude | Ru-1960-Daruzes |
+|---|---|---|---|---|---|
+| 6 | +0.00 | -0.08 | +0.11 | +0.93 | +0.68 |
+| 12 | -0.52 | -0.40 | -0.02 | -0.21 | -0.07 |
+| 14 | +0.50 | +0.11 | +0.87 | +0.19 | -0.38 |
+| 36 | +0.01 | +0.32 | +0.11 | +0.55 | +0.15 |
+| 38 | +0.10 | -0.37 | -0.02 | -1.27 | -0.31 |
+| 46 | -0.63 | +0.31 | -0.88 | -0.87 | +0.42 |
+| 74 | -0.10 | -0.16 | +0.22 | -0.44 | +0.25 |
+| 78 | -1.03 | -0.09 | +1.41 | +0.01 | +0.26 |
+| 98 | +0.16 | +0.04 | -0.23 | -0.37 | +0.00 |
+| 102 | +0.60 | +0.43 | +0.39 | +0.29 | +0.11 |
+| 108 | +0.10 | +0.07 | -0.11 | +0.28 | -0.39 |
+| 110 | +1.46 | +0.22 | -0.66 | +0.25 | +0.27 |
+| 238 | +0.16 | -0.23 | -0.26 | +0.09 | -1.52 |
+| max \|Δ\| | 1.46 | 0.43 | 1.41 | 1.27 | 1.52 |
+
+### Comparison with Figure 9 of `Final Report 3.pdf`
+
+**Not done.** Figure 9 is an image, and the Read tool cannot render PDF pages in this environment (`pdftoppm` from poppler is not installed). The values have not been compared yet.
 
 ### MEMBERS files: members per motif (cap 1000)
 
-Not checked: no MEMBERS files found.
+Each cell: count in mfinder's `Partial list of N members:` header / member rows listed /
+distinct unordered node triples among those rows.
+
+| Motif | Ru1 | Ru2 | Ru3 | Ru4 | Ru5 |
+|---|---|---|---|---|---|
+| 6 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 |
+| 12 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 |
+| 14 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 |
+| 36 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 |
+| 38 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 |
+| 46 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 |
+| 74 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 |
+| 78 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 |
+| 98 | 2002 / 2002 / 2002 | 2002 / 2002 / 2002 | 2002 / 2002 / 2002 | 2002 / 2002 / 2002 | 2002 / 2002 / 2002 |
+| 102 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 |
+| 108 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 | 3003 / 3003 / 3003 |
+| 110 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 | 6006 / 6006 / 6006 |
+| 238 | 1001 / 1001 / 1001 | 1001 / 1001 / 1001 | 1001 / 1001 / 1001 | 1001 / 1001 / 1001 | 1001 / 1001 / 1001 |
+
+- `Ru1_mfinder_members_OUT.txt`: motifs at exactly 1000: none
+- `Ru2_mfinder_members_OUT.txt`: motifs at exactly 1000: none
+- `Ru3_mfinder_members_OUT.txt`: motifs at exactly 1000: none
+- `Ru4_mfinder_members_OUT.txt`: motifs at exactly 1000: none
+- `Ru5_mfinder_members_OUT.txt`: motifs at exactly 1000: none
+
+Motifs whose member counts are identical in all 5 texts: 13 of 13. Since NREAL is in the thousands to millions and the header says
+`Partial list`, these lists are truncated samples, not complete member sets. The counts fit
+1001 × 6/|Aut(motif)| (e.g. 238, fully mutual triad, 6 automorphisms → 1001; 38, feed-forward
+loop, 1 automorphism → 6006); that mechanism is inferred, not verified in mfinder's source.
 
