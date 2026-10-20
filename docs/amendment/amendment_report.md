@@ -234,7 +234,13 @@ words, so lemmatization could not recover them.
 | Words containing ё (letter deleted) | 4 | 1 | 22 | 3 | 23 |
 | Hyphenated words (fused) | 1,078 | 397 | 538 | 855 | 1,143 |
 
-The old article values computed from this text are recomputed in the stages that follow.
+Each fused form (e.g. «коечто», «когото») is a word that does not exist in Russian. The old
+lemmatizer (pymorphy2) cannot find it in its dictionary, so inflected forms of the same hyphenated
+word are not reliably grouped under one lemma. The fusion therefore changes the old type counts of
+all five texts: 1,078 fused hyphenated words in Ru-1911, 397 in Ru-1926, 538 in Ru-1933, 855 in
+Ru-1949 and 1,143 in Ru-1960. Their effect on the lexical-richness numbers (Yule's K, Honoré's W, type–token ratio,
+unigram entropy) will be quantified in the Classic Stylometric Measures stage (Section 7), where the
+impact level will be confirmed.
 
 **Impact level: Wording.** The article's description of "clean" data in "Distinct Full Datasets"
 should describe the new procedure (see 4.8).
@@ -359,16 +365,18 @@ contains more connections overall." with:
 
 In the Discussion table, the description of the Raw Motif Z-Score Heatmap ("while being influenced
 by network size") can stay. Raw Z-scores do depend on network size in general, which is why the
-article normalizes them in Figure 10.
+article normalizes them in Figure 10 using the significance profile of Milo et al.⁵
 
 ### 5.4 Edge weights
 
 **What changed.** Old: the article describes edge weights as part of the network mfinder analyses. New:
 we state that mfinder counts motifs on the unweighted network.
 
-**Why.** The mfinder input files carry bigram counts as a third column (from 1 to 298), but mfinder
-does not use that column when counting motifs or generating random networks². Motif counts and
-Z-scores depend only on which directed edges exist, not on how often each was traversed. The rebuilt
+**Why.** The mfinder input files carry bigram counts as a third column (from 1 to 298). The mfinder
+1.2 manual, §2.4, states: "In the current version <edge weight> is ignored and should be 1 for all
+edges."² The manual documents no option for using weights, and the old command
+(`mfinder <input> -s 3 -r 100 -omem -f <output>`, in `18run_mfinder.sh`) passed none. Motif counts and
+Z-scores therefore depend only on which directed edges exist, not on how often each was traversed. The rebuilt
 pipeline sets motif edge weights to 1 and keeps bigram counts only where a weighted measure uses them.
 
 **Effect.** None on the archived values, which were computed as mfinder computes them. Only the
@@ -424,7 +432,8 @@ To be completed.
 
 ## 7. Classic Stylometric Measures
 
-To be completed.
+To be completed. Carried over from 4.7: quantify the effect of the old fusion of hyphenated words on
+the lexical-richness numbers, and confirm the impact level.
 
 ## 8. Delta, Clustering and Embedding
 
@@ -448,10 +457,13 @@ To be completed.
 
 1. Talbot, V. *Comparative Stylometric Analysis of Mark Twain's "The Adventures of Huckleberry Finn"
    Russian Translations: Classic & Novel Approaches* (Final Report 3). (2025).
-2. Kashtan, N., Itzkovitz, S., Milo, R. & Alon, U. Network motif detection tool mfinder tool guide.
-   (2004).
+2. Kashtan, N., Itzkovitz, S., Milo, R. & Alon, U. *Network Motif Detection Tool: mfinder Tool
+   Guide*, version 1.2. Weizmann Institute of Science (2005). Bundled with pymfinder:
+   https://github.com/stoufferlab/pymfinder (`pymfinder/mfinder/mfinder-manual.pdf`).
 3. Kashtan, N., Itzkovitz, S., Milo, R. & Alon, U. Efficient sampling algorithm for estimating
    subgraph concentrations and detecting network motifs. *Bioinformatics* 20, 1746–1758 (2004).
 4. Korobov, M. Morphological Analyzer and Generator for Russian and Ukrainian Languages. In
    *Analysis of Images, Social Networks and Texts (AIST 2015)*, Communications in Computer and
    Information Science 542, 320–332 (2015). Used via pymorphy3 2.0.6.
+5. Milo, R. et al. Superfamilies of evolved and designed networks. *Science* 303, 1538–1542 (2004).
+   Source of the significance-profile method.
