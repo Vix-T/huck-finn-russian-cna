@@ -121,14 +121,19 @@ seed = 20261019              # random seed for the review sample
 never_join_after = ["не", "ни"]       # A (lowercased) in this list: never join
 block_if_second_capitalized = true    # B starting with a capital letter: never join
 
-# Rule i2. Within-text attestation join, runs after rule i. OFF pending review.
+# Rule i2. Within-text attestation join, runs after rule i.
 [clean.attested_joins]
-apply = false                # false = preview only (review files and report); cleaned texts unchanged
+apply = true                 # false = preview only (review files and report); cleaned texts unchanged
 min_attested = 2             # AB must occur as a single token at least this often in the same text
+min_part_letters = 2         # i2-only guard: never join when A or B has fewer letters than this
 sample_text = "Ru1"          # text whose would-be joins are sampled for hand-checking
 sample_size = 100
 seed = 20261020
 top_n = 30                   # most frequent would-be joins listed in the report (sample_text only)
+# Seeded sample of joins actually applied (only when apply = true), with wider context.
+applied_sample_size = 40
+applied_seed = 20261021
+applied_context_chars = 40   # characters of context either side of the joined pair
 
 # Rule j.
 [clean.yo]

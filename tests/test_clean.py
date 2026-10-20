@@ -236,8 +236,20 @@ class AttestedJoinTests(unittest.TestCase):
                   for t, s in (("A", text_a), ("B", text_b))}
         return c.clean_corpus(stage1, CFG, [], apply_i2=True)
 
-    def test_off_by_default(self):
-        self.assertFalse(CFG["attested_joins"]["apply"])
+    def test_on_in_config(self):
+        self.assertTrue(CFG["attested_joins"]["apply"])
+
+    def test_not_joined_when_a_part_is_one_letter(self):
+        results = self.corpus("убил и ушел. в место.\nубили.\nубили.\nвместо.\nвместо.\n", "другой.\n")
+        self.assertEqual(results["A"].lines[0].text, "убил и ушел. в место.")
+
+    def test_applied_sample_seeded_and_in_text_order(self):
+        joins = [{"line": n} for n in range(100)]
+        att = CFG["attested_joins"]
+        first, second = c.applied_join_sample(joins, att), c.applied_join_sample(joins, att)
+        self.assertEqual(first, second)
+        self.assertEqual(len(first), att["applied_sample_size"])
+        self.assertEqual(first, sorted(first, key=lambda j: j["line"]))
 
     def test_joined_when_attested_and_absent_elsewhere(self):
         results = self.corpus("толь ко раз.\nтолько тут.\nтолько там.\n", "другой текст.\n")

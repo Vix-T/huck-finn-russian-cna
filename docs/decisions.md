@@ -60,7 +60,13 @@ Rules run in the order a–k given in `src/huckfinn_cna/clean.py`; every change 
     join A B → AB when AB occurs as one token at least `min_attested` times in the same text, the pair
     «A B» occurs in none of the other four texts, and the rule i guards allow it. Each run writes a preview
     (`data/interim/clean/review/i2_*.tsv`) and its projected effect in the cleaning report; the cleaned
-    texts are not changed.
+    texts are not changed. *Superseded by 13: i2 is now ON.*
+13. **Rule i2 ON, with a single-letter guard** (2026-10-20; config `clean.attested_joins`). i2 never joins
+    when A or B is a single letter (`min_part_letters = 2`): pairs such as «в место», «убил и», «с на» are
+    normal Russian as two words. Ordinary rule i guards still apply. With the guard, `apply = true`: the
+    cleaned texts include i2 joins (Ru1 434, Ru2 2, Ru3 1, Ru4 4, Ru5 4). Each run writes a seeded sample
+    of applied Ru1 joins with 40 characters of context (`i2_applied_sample_Ru1.tsv`, 40 joins,
+    seed 20261021) for hand-checking.
 
 Manual corrections go in `data/corrections/manual.tsv` (text, raw line, before, after, reason) and are
 applied last (rule k); each entry must match exactly once or the run fails.

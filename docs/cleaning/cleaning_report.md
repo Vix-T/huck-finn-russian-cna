@@ -17,10 +17,10 @@ rationale: `docs/decisions.md`.
 | g. punctuation | 2352 | 155 | 520 | 121 | 204 |
 | h. broken hyphenation rejoined | 0 | 2 | 22 | 3 | 40 |
 | i. split words joined | 92 | 0 | 1 | 0 | 0 |
-| i2. split words joined by attestation (only if enabled) | 0 | 0 | 0 | 0 | 0 |
+| i2. split words joined by attestation (only if enabled) | 434 | 2 | 1 | 4 | 4 |
 | j. ё to е | 4 | 1 | 22 | 3 | 23 |
 | k. manual corrections | 1 | 1 | 1 | 0 | 0 |
-| **total** | 4628 | 2754 | 1422 | 4511 | 5020 |
+| **total** | 5062 | 2756 | 1423 | 4515 | 5024 |
 
 ## Word tokens and types, before and after
 
@@ -29,11 +29,11 @@ Types are lowercased. *Before* is the raw text after BOM strip and newline norma
 
 | Text | Label | Tokens before | Tokens after | Δ tokens | Types before | Types after | Δ types | Δ types % |
 |---|---|---|---|---|---|---|---|---|
-| Ru1 | Ru-1911-Engelgardt | 115056 | 114861 | -195 | 20876 | 20714 | -162 | -0.8% |
-| Ru2 | Ru-1926-Anon | 48208 | 48210 | +2 | 10291 | 10291 | +0 | +0.0% |
-| Ru3 | Ru-1933-Chukovsky-(Ed.) | 63217 | 63195 | -22 | 12689 | 12683 | -6 | -0.0% |
-| Ru4 | Ru-1949-Braude | 91768 | 91765 | -3 | 14939 | 14936 | -3 | -0.0% |
-| Ru5 | Ru-1960-Daruzes | 92298 | 92140 | -158 | 14399 | 14357 | -42 | -0.3% |
+| Ru1 | Ru-1911-Engelgardt | 115056 | 114427 | -629 | 20876 | 20494 | -382 | -1.8% |
+| Ru2 | Ru-1926-Anon | 48208 | 48208 | +0 | 10291 | 10289 | -2 | -0.0% |
+| Ru3 | Ru-1933-Chukovsky-(Ed.) | 63217 | 63194 | -23 | 12689 | 12683 | -6 | -0.0% |
+| Ru4 | Ru-1949-Braude | 91768 | 91761 | -7 | 14939 | 14936 | -3 | -0.0% |
+| Ru5 | Ru-1960-Daruzes | 92298 | 92136 | -162 | 14399 | 14357 | -42 | -0.3% |
 
 ## Front matter removed (rule b)
 
@@ -83,29 +83,28 @@ Candidates not joined (A, B and AB all dictionary words) per 10,000 word tokens 
 
 | Text | Word tokens | Candidates | per 10,000 tokens |
 |---|---|---|---|
-| Ru1 | 114861 | 3792 | 330.1 |
-| Ru2 | 48210 | 1427 | 296.0 |
-| Ru3 | 63195 | 1811 | 286.6 |
-| Ru4 | 91765 | 3161 | 344.5 |
-| Ru5 | 92140 | 3142 | 341.0 |
+| Ru1 | 114427 | 3792 | 331.4 |
+| Ru2 | 48208 | 1427 | 296.0 |
+| Ru3 | 63194 | 1811 | 286.6 |
+| Ru4 | 91761 | 3161 | 344.5 |
+| Ru5 | 92136 | 3142 | 341.0 |
 
-## Rule i2 (attestation joins): projected effect
+## Rule i2 (attestation joins): effect
 
-Rule i2 is **OFF** (`clean.attested_joins.apply`). The projection runs the full
-pipeline with i2 applied (AB attested ≥ 2 times as one token in the same text, pair
-«A B» absent from the other four texts, rule i guards); it is not written as cleaned text.
+Rule i2 is **ON** (`clean.attested_joins.apply`) and applied to the cleaned texts (AB attested ≥ 2 times as one token in the same text, pair «A B» absent from the other four texts, rule i guards, A and B each ≥ 2 letters).
+*Types (i2 off)* is the same pipeline without i2; *Types (i2 on)* matches the table above.
 
-| Text | Would-be joins | Distinct pairs | Types (i2 off) | Types (i2 on) | Δ types | Δ types % |
+| Text | Joins | Distinct pairs | Types (i2 off) | Types (i2 on) | Δ types | Δ types % |
 |---|---|---|---|---|---|---|
-| Ru1 | 459 | 343 | 20714 | 20494 | -220 | -1.1% |
-| Ru2 | 8 | 8 | 10291 | 10287 | -4 | -0.0% |
-| Ru3 | 6 | 6 | 12683 | 12683 | +0 | +0.0% |
-| Ru4 | 23 | 21 | 14936 | 14931 | -5 | -0.0% |
-| Ru5 | 40 | 29 | 14357 | 14352 | -5 | -0.0% |
+| Ru1 | 434 | 324 | 20714 | 20494 | -220 | -1.1% |
+| Ru2 | 2 | 2 | 10291 | 10289 | -2 | -0.0% |
+| Ru3 | 1 | 1 | 12683 | 12683 | +0 | +0.0% |
+| Ru4 | 4 | 4 | 14936 | 14936 | +0 | +0.0% |
+| Ru5 | 4 | 3 | 14357 | 14357 | +0 | +0.0% |
 
-Review: `i2_preview.tsv` (all would-be joins), `i2_pairs.tsv` (joins per distinct pair), `i2_sample_Ru1.tsv` (100 joins, seed 20261020).
+Review: `i2_preview.tsv` (all would-be joins), `i2_pairs.tsv` (joins per distinct pair), `i2_sample_Ru1.tsv` (100 joins, seed 20261020), `i2_applied_sample_Ru1.tsv` (40 applied joins, seed 20261021, 40 characters of context).
 
-### Ru1: 30 most frequent would-be i2 joins
+### Ru1: 30 most frequent i2 joins
 
 | A B | AB | Joins | AB attested in text |
 |---|---|---|---|
@@ -119,7 +118,6 @@ Review: `i2_preview.tsv` (all would-be joins), `i2_pairs.tsv` (joins per distinc
 | посте пенно | постепенно | 4 | 15 |
 | при знаться | признаться | 4 | 37 |
 | да же | даже | 4 | 161 |
-| в место | вместо | 3 | 41 |
 | на верное | наверное | 3 | 24 |
 | на шу | нашу | 3 | 14 |
 | на конец | наконец | 3 | 76 |
@@ -133,9 +131,10 @@ Review: `i2_preview.tsv` (all would-be joins), `i2_pairs.tsv` (joins per distinc
 | хоте лось | хотелось | 3 | 37 |
 | де нег | денег | 2 | 23 |
 | рас сказывать | рассказывать | 2 | 28 |
-| тем у | тему | 2 | 7 |
 | разбой ников | разбойников | 2 | 15 |
-| убил и | убили | 2 | 14 |
 | пяти десяти | пятидесяти | 2 | 3 |
-| с на | сна | 2 | 2 |
 | пони маешь | понимаешь | 2 | 4 |
+| на питься | напиться | 2 | 2 |
+| ку сок | кусок | 2 | 13 |
+| по том | потом | 2 | 55 |
+| близ ко | близко | 2 | 16 |

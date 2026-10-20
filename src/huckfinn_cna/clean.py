@@ -371,6 +371,8 @@ def attested_join_count(a: str, b: str, text_id: str, attestation: dict, cfg: di
     yo = cfg["yo"]
     if guard_reason(a, b, cfg["split_words"]) is not None:
         return None
+    if min(len(a), len(b)) < cfg["attested_joins"]["min_part_letters"]:
+        return None
     pair = (normalize_form(a, yo), normalize_form(b, yo))
     if any(pair in pairs for other, pairs in attestation["pairs"].items() if other != text_id):
         return None
@@ -380,6 +382,7 @@ def attested_join_count(a: str, b: str, text_id: str, attestation: dict, cfg: di
 
 def apply_attested_joins(result: Result, text_id: str, attestation: dict, cfg: dict, ctx: int) -> None:
     """Rule i2: one left-to-right pass per line; a joined token is not paired again."""
+    wide = cfg["attested_joins"]["applied_context_chars"]
     for line in result.lines:
         text = line.text
         out, pos = [], 0
@@ -392,7 +395,9 @@ def apply_attested_joins(result: Result, text_id: str, attestation: dict, cfg: d
             left, right = text[max(0, a.start() - ctx):a.start()], text[b.end():b.end() + ctx]
             result.changes.append(Change("i2", line.number, f"{a.group(0)} {b.group(0)}", ab, left, right))
             result.attested_joins.append({"line": line.number, "a": a.group(0), "b": b.group(0), "ab": ab,
-                                          "attested": attested, "left": left, "right": right})
+                                          "attested": attested, "left": left, "right": right,
+                                          "wide_left": text[max(0, a.start() - wide):a.start()],
+                                          "wide_right": text[b.end():b.end() + wide]})
             out += [text[pos:a.start()], ab]
             pos = b.end()
         if pos:
@@ -592,6 +597,20 @@ def write_attested_review(per_text: dict, review_dir: Path, cfg: dict) -> None:
     sample = random.Random(cfg["seed"]).sample(rows, min(cfg["sample_size"], len(rows)))
     write_tsv(review_dir / f"i2_sample_{target}.tsv", ["text", "line", "A", "B", "AB", "attested_in_text", "context"],
               sorted(sample, key=lambda r: r[1]))
+    applied_path = review_dir / f"i2_applied_sample_{target}.tsv"
+    if cfg["apply"]:
+        write_tsv(applied_path, ["text", "line", "A", "B", "AB", "attested_in_text", "context"],
+                  [[target, j["line"], j["a"], j["b"], j["ab"], j["attested"],
+                    f"{j['wide_left']}[{j['a']} {j['b']}]{j['wide_right']}"]
+                   for j in applied_join_sample(per_text[target]["result"].attested_joins, cfg)])
+    else:
+        applied_path.unlink(missing_ok=True)
+
+
+def applied_join_sample(joins: list[dict], cfg: dict) -> list[dict]:
+    """Seeded sample of applied i2 joins, in text order."""
+    sample = random.Random(cfg["applied_seed"]).sample(joins, min(cfg["applied_sample_size"], len(joins)))
+    return sorted(sample, key=lambda j: j["line"])
 
 
 def excerpt(text: str, n: int) -> str:
@@ -676,24 +695,34 @@ def render_report(per_text: dict, config: dict, sampled: dict) -> str:
         L.append(f"| {t} | {tokens} | {cands} | {per * cands / tokens:.1f} |")
 
     att = cfg["attested_joins"]
-    L += ["", "## Rule i2 (attestation joins): projected effect", "",
-          f"Rule i2 is **{'ON' if att['apply'] else 'OFF'}** (`clean.attested_joins.apply`). The projection runs the full",
-          f"pipeline with i2 applied (AB attested ≥ {att['min_attested']} times as one token in the same text, pair",
-          "«A B» absent from the other four texts, rule i guards); it is not written as cleaned text.", ""]
+    conditions = (f"AB attested ≥ {att['min_attested']} times as one token in the same text, pair «A B» absent "
+                  f"from the other four texts, rule i guards, A and B each ≥ {att['min_part_letters']} letters")
+    if att["apply"]:
+        L += ["", "## Rule i2 (attestation joins): effect", "",
+              f"Rule i2 is **ON** (`clean.attested_joins.apply`) and applied to the cleaned texts ({conditions}).",
+              "*Types (i2 off)* is the same pipeline without i2; *Types (i2 on)* matches the table above.", ""]
+    else:
+        L += ["", "## Rule i2 (attestation joins): projected effect", "",
+              f"Rule i2 is **OFF** (`clean.attested_joins.apply`). The projection runs the full pipeline with i2",
+              f"applied ({conditions}); it is not written as cleaned text.", ""]
     if any(per_text[t]["projection_error"] for t in ids):
         L.append(f"**Projection failed:** {per_text[ids[0]]['projection_error']}")
     else:
-        L += ["| Text | Would-be joins | Distinct pairs | Types (i2 off) | Types (i2 on) | Δ types | Δ types % |",
+        L += [f"| Text | {'Joins' if att['apply'] else 'Would-be joins'} | Distinct pairs | Types (i2 off) | "
+              "Types (i2 on) | Δ types | Δ types % |",
               "|---|---|---|---|---|---|---|"]
         for t in ids:
             joins = per_text[t]["projection"].attested_joins
-            off, on = per_text[t]["after"]["types"], per_text[t]["projected_after"]["types"]
+            off, on = per_text[t]["without_i2"]["types"], per_text[t]["projected_after"]["types"]
             L.append(f"| {t} | {len(joins)} | {len(attested_pair_counts(joins))} | {off} | {on} | {on - off:+d} | "
                      f"{100 * (on - off) / off:+.1f}% |")
         target = att["sample_text"]
         L += ["", f"Review: `i2_preview.tsv` (all would-be joins), `i2_pairs.tsv` (joins per distinct pair), "
-                  f"`i2_sample_{target}.tsv` ({att['sample_size']} joins, seed {att['seed']}).", "",
-              f"### {target}: {att['top_n']} most frequent would-be i2 joins", "",
+                  f"`i2_sample_{target}.tsv` ({att['sample_size']} joins, seed {att['seed']})"
+                  + (f", `i2_applied_sample_{target}.tsv` ({att['applied_sample_size']} applied joins, "
+                     f"seed {att['applied_seed']}, {att['applied_context_chars']} characters of context)."
+                     if att["apply"] else "."), "",
+              f"### {target}: {att['top_n']} most frequent {'' if att['apply'] else 'would-be '}i2 joins", "",
               "| A B | AB | Joins | AB attested in text |", "|---|---|---|---|"]
         for (a, b, ab), n, attested in attested_pair_counts(per_text[target]["projection"].attested_joins)[:att["top_n"]]:
             L.append(f"| {a} {b} | {ab} | {n} | {attested} |")
@@ -726,6 +755,8 @@ def run(config_path: Path = DEFAULT_CONFIG, clean_dir: Path | None = None, revie
         projection, projection_error = clean_corpus(stage1, cfg, corrections, apply_i2=True), None
     except CleaningError as err:
         projection, projection_error = None, str(err)
+    # Baseline without rule i2, for the report's off/on comparison.
+    without_i2 = clean_corpus(stage1, cfg, corrections, apply_i2=False) if cfg["attested_joins"]["apply"] else results
 
     per_text = {}
     for text_id, result in results.items():
@@ -735,6 +766,7 @@ def run(config_path: Path = DEFAULT_CONFIG, clean_dir: Path | None = None, revie
             "result": result,
             "before": word_stats(before_text),
             "after": word_stats(after_text),
+            "without_i2": word_stats(render(without_i2[text_id].lines)),
             "proposals": front_back_proposals(result.lines, cfg["front_back_proposals"]),
             "residual_half_hyphens": len(HALF_HYPHEN_RE.findall(after_text)),
             "projection": projection[text_id] if projection else None,
