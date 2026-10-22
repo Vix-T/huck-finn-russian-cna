@@ -5,7 +5,9 @@ description = "Stylometry and complex network analysis of five Russian translati
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "igraph>=1.0.0",
     "matplotlib>=3.11.2",
+    "networkx>=3.7",
     "pymorphy3>=2.0.6",
     "pymorphy3-dicts-ru>=2.4.417150.4580142",
     "razdel==0.5.0",

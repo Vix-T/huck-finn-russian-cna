@@ -9,3 +9,7 @@ data/raw/*
 .claude/settings.local.json
 data/interim/
 models/
+
+# mfinder build outputs (tools/mfinder/build.sh)
+tools/mfinder/build/
+tools/mfinder/bin/

@@ -117,3 +117,32 @@ parameters in config `[tag]` and `[pos_check]`.
     NOUN : VERB, NOUN : (VERB + AUX), and the finite, participle and verbal-adverb (Conv) shares of
     VERB and AUX tokens. Two values are called distinguishable when their intervals do not overlap
     (conservative). Compared: Braude vs Daruzes (`compare_pair`) and Ru1 vs Ru5 (`trend_endpoints`).
+
+## Network construction and mfinder (2026-10-21)
+
+Implemented in `src/huckfinn_cna/networks.py`, `tools/mfinder/` and `scripts/run_mfinder.sh`;
+parameters in config `[networks]` and `[mfinder]`.
+
+23. **Lemmas as nodes.** One directed network per text. Nodes are Stanza lemmas (column `lemma`) of
+    word tokens (`is_word = 1`), lowercased. Stanza writes «всё» as a lemma although the cleaned text
+    has no ё, so lemmas are mapped ё → е (`networks.lemma_char_map`; project owner's decision,
+    2026-10-21, in line with decision 1); this merges «всё» into «все». Every word lemma is a node,
+    including the 9–13 per text that end up with no edge.
+24. **Sentence-bounded edges.** Within each sentence (Stanza `sent_id`), each word links to the next
+    word. Tokens that are not words (punctuation, and the 14–72 numbers, abbreviations and OCR
+    fragments per text) are skipped, so words on either side of a comma are linked. No edge crosses a
+    sentence boundary. Self-loops are dropped and counted. Edge counts are kept for weighted measures
+    (decision 8); the motif graph is unweighted and mfinder's weight column is 1.
+25. **Python is the main engine; mfinder is a cross-check.** The 13 connected 3-node triads are
+    counted exactly with igraph (`motifs_randesu`, size 3) and networkx (`triadic_census`); the run
+    fails unless they agree. Triad classes are labelled with mfinder subgraph IDs, decoded from
+    mfinder's scheme (ID = Σ a[i][j]·2^(3i+j), smallest over vertex orderings) and stored in config
+    `[[networks.triads]]` by `python -m huckfinn_cna.networks --triad-table`; a test checks the stored
+    table against the decoding, and the mfinder tests check it against mfinder's own output.
+26. **mfinder source and seed patch.** mfinder 1.2 is vendored in `tools/mfinder/src` from the
+    original import in the pymfinder repository (commit `62acf97`), not pymfinder's later modified
+    copy, which disables output files and runs 10× the edge switches per random network
+    (`tools/mfinder/README.md`). The only change is `tools/mfinder/seed.patch`: the random seed is
+    read from `MFINDER_SEED` (integer 1..2147483646; the run fails if it is missing or invalid)
+    instead of the clock. Flags: `-s 3 -r N -f NAME -q -orall`; `-orall` keeps every random
+    network's counts for empirical p-values. `-omem` and `-nu` are not used.

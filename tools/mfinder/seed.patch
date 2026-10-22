@@ -1,0 +1,43 @@
+--- a/random.c
++++ b/random.c
+@@ -11,6 +11,7 @@
+ *************************************************************************/#include <stdio.h>
+ #include <stdlib.h>
+ #include <time.h>
++#include <errno.h>
+ #include "random.h"
+ 
+ 
+@@ -148,12 +149,29 @@
+ 
+ //return negative random seed
+ //this is needed to ran2
++//
++//Patched for huck-finn-russian-cna (tools/mfinder/seed.patch): the seed is read from the
++//MFINDER_SEED environment variable instead of the clock, and the program exits if it is
++//missing or invalid. ran2() runs its initialisation only for a seed <= 0, so the seed is
++//stored negated. (The original time(NULL) | 0x80000000 is positive where long is 64 bits.)
+ void
+ init_random_seed()
+ {
+-	long neg_mask=0x80000000;
+-	Rand_seed= (long)time(NULL) | neg_mask;
+-	//Rand_seed= 0xfff00000;
++	const char *s = getenv("MFINDER_SEED");
++	char *end;
++	long v;
++
++	if (s == NULL || *s == '\0') {
++		fprintf(stderr, "mfinder: MFINDER_SEED is not set; set it to an integer in 1..2147483646\n");
++		exit(2);
++	}
++	errno = 0;
++	v = strtol(s, &end, 10);
++	if (errno != 0 || *end != '\0' || v < 1 || v > 2147483646) {
++		fprintf(stderr, "mfinder: MFINDER_SEED='%s' is not an integer in 1..2147483646\n", s);
++		exit(2);
++	}
++	Rand_seed = -v;
+ }
+ 
+ // return random integer in the interval 1 to max_val

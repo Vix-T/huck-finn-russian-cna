@@ -1,7 +1,7 @@
 # Amendment Report: Rebuilt Pipeline for *Comparative Stylometric Analysis of Mark Twain's "The Adventures of Huckleberry Finn" Russian Translations*
 
 **Vix Talbot**
-10-2026 (last updated 2026-10-20)
+10-2026 (last updated 2026-10-21)
 
 Companion to *Final Report 3*¹ (11-2025). This is a living report: a section is added at the end of
 each pipeline stage, and the Executive Summary is updated with it.
@@ -10,9 +10,9 @@ each pipeline stage, and the Executive Summary is updated with it.
 
 ## 1. Executive Summary
 
-We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. Three stages are
-complete: the data audit with text preparation, an audit of the previous motif results, and
-tokenization with part-of-speech tagging.
+We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. Four stages are
+complete: the data audit with text preparation, an audit of the previous motif results,
+tokenization with part-of-speech tagging, and network construction.
 
 **Text preparation** changes how the article should describe its data. The 1911 Engel'gardt text (Ru-1911) contains OCR damage, mainly words split by stray
 spaces. We repaired it, which reduces its vocabulary by 382 word types (1.8%). In the other four
@@ -43,6 +43,14 @@ the lowest noun-to-verb ratio of the five (0.81), with Braude next (0.85), but p
 finite verbs and away from participles and verbal adverbs holds well outside the intervals. Figure 6
 is replaced, and §3.2.2, the Executive Summary and the Discussion need revised text.
 
+**Network construction** now keeps edges inside sentences. The old networks linked the last word of
+each sentence to the first word of the next. Removing those links removes 9–11% of the edges in
+every translation. Node counts change by −4% to +2%, mostly from the new lemmatizer, and Braude's
+network still ranks third by size. The motif counts are now computed exactly in Python by two
+libraries that agree on every value, with mfinder 1.2 kept as a cross-check, using a recorded random
+seed. The motif and centrality values are recomputed in the next stages. For this stage only the
+article's description of the network changes (Data Pipeline, §3.4).
+
 ### Changes at a glance
 
 | Stage | Change | Impact level | Article section affected |
@@ -63,6 +71,9 @@ is replaced, and §3.2.2, the Executive Summary and the Discussion need revised 
 | Tokenization and Tagging | Verbs outrank nouns in Ru-1926, Ru-1933, Ru-1949 and Ru-1960; the Daruzes "inversion" is not unique | Finding | §3.2.2, Figure 6; Executive Summary; Discussion |
 | Tokenization and Tagging | Bootstrap 95% CIs: Daruzes and Braude not distinguishable on NOUN : VERB; verb lead in Ru-1926 and Ru-1933 not established under spaCy; 1911→1960 verb-form trend holds | Finding | §3.2.2; Executive Summary; Discussion |
 | Tokenization and Tagging | Hyphenated words (что-то, мало-помалу) kept as single tokens | None | — |
+| Network Construction | Edges restricted to sentences (old: across sentence boundaries); 9–11% fewer edges | Wording | Data Pipeline; §3.4 |
+| Network Construction | Nodes are Stanza lemmas (ё → е); node counts −4% to +2% | Wording | §3.4 |
+| Network Construction | Exact motif counts in Python (igraph = networkx); mfinder 1.2 kept as cross-check with a recorded seed | None | — |
 
 ---
 
@@ -626,7 +637,107 @@ To be completed.
 
 ## 9. Network Construction
 
-To be completed.
+### 9.1 What changed
+
+**Old.** Each translation was one word-adjacency network built from its lemmatized text
+(pymorphy2 lemmas, stop words kept) read as a single stream of tokens (`03feature_extraction.py`,
+`17create_mfinder_network.py`). An edge A → B was drawn whenever lemma B followed lemma A anywhere in
+that stream, so the last word of one sentence was linked to the first word of the next, and across
+paragraph and chapter breaks too. Self-loops were removed.
+
+**New.** Nodes are the Stanza lemmas of the word tokens (Section 6), lowercased, with ё written as е
+(Stanza writes «всё» as a lemma although the prepared text has no ё; this keeps one node «все»). An
+edge A → B is drawn when B is the next word after A **in the same sentence**. Punctuation and other
+non-word tokens are skipped, so words on either side of a comma are still linked, but no edge
+crosses a sentence boundary. Self-loops (a lemma followed by itself) are dropped. The number of
+times each edge occurs is kept for weighted measures (Section 11); the motif analysis uses the
+unweighted network (Section 5.4).
+
+The motif counts in the real networks are now computed exactly in Python by two independent
+libraries (igraph and networkx), which must agree on every value. mfinder 1.2 is kept as a
+cross-check. Its counts in the real networks must equal the Python counts exactly, and we still use
+it to generate the random networks.
+
+### 9.2 Why
+
+A word-adjacency edge records a choice the translator made in arranging words. The pair formed by
+the last word of one sentence and the first word of the next records a sentence break, not a word
+arrangement. Linking across the break adds edges that no translator wrote as a sequence, and their
+number depends on how many sentences a translation has. The method the article follows (El-Fiqi
+et al.) builds the network from consecutive words; restricting edges to sentences makes the network
+represent only word order within sentences.
+
+### 9.3 Effect
+
+Network sizes (full tables: `docs/networks/network_report.md`). *Old* is the archived mfinder input.
+*New lemmas, crossing* is a diagnostic: the same new lemmas linked across sentence boundaries, as in
+the old pipeline. It separates the effect of the sentence boundary from the effects of the new
+cleaning and lemmatizer.
+
+| Translation | Old nodes | New nodes | Old edges | New lemmas, crossing | New edges | Change vs old | Due to sentence boundaries |
+|---|---|---|---|---|---|---|---|
+| Ru-1911-Engelgardt | 9,822 | 9,868 | 67,577 | 66,988 | 60,480 | −10.5% | −9.7% |
+| Ru-1926-Anon | 5,836 | 5,593 | 31,254 | 31,116 | 28,099 | −10.1% | −9.7% |
+| Ru-1933-Chukovsky-(Ed.) | 6,665 | 6,736 | 40,160 | 39,992 | 35,590 | −11.4% | −11.0% |
+| Ru-1949-Braude | 7,634 | 7,809 | 49,719 | 49,673 | 45,376 | −8.7% | −8.7% |
+| Ru-1960-Daruzes | 7,335 | 7,503 | 51,216 | 50,983 | 46,339 | −9.5% | −9.1% |
+
+New nodes are those with at least one edge, comparable with the old count. A further 9–13 lemmas per
+translation occur only in one-word sentences or only next to themselves, and so have no edge.
+Restricting edges to sentences removes 9–11% of the distinct edges in every translation. The change
+of cleaning and lemmatizer alone moves the edge count by less than 1%, and node counts by −4% to
++2%. The ranking by edges is unchanged: Engel'gardt, Daruzes, Braude, Chukovsky, Anon. Braude's
+network still ranks third, so Section 5.3 stands.
+
+| Translation | Mutual pairs | Self-loops dropped |
+|---|---|---|
+| Ru-1911-Engelgardt | 3,211 | 51 |
+| Ru-1926-Anon | 1,664 | 62 |
+| Ru-1933-Chukovsky-(Ed.) | 2,095 | 99 |
+| Ru-1949-Braude | 3,026 | 110 |
+| Ru-1960-Daruzes | 3,407 | 125 |
+
+*Mutual pairs*: pairs of words linked in both directions (A → B and B → A). *Self-loops dropped*:
+occurrences of a lemma directly followed by itself within a sentence, mostly «друг друга»,
+«в конце концов» and repetitions such as «да, да» or «я… я».
+
+The Python counts of the 13 connected 3-node subgraphs agree exactly between igraph and networkx in
+all five translations. On the example network in the mfinder manual (Chapter 4), mfinder, igraph and
+networkx all give the manual's published counts.
+
+**mfinder set-up.** mfinder 1.2 is built from the original source as first imported into the
+pymfinder repository², not from pymfinder's later modified copy. That copy runs about ten times as
+many edge switches per random network as the manual documents. mfinder's random seed, originally
+taken from the clock, is now a recorded parameter, so every run can be repeated exactly. On 64-bit
+systems the original seeding also skipped the initialization of mfinder's random-number generator
+(`ran2`). This does not invalidate the archived 2025 runs, but it is one more reason to treat their
+exact values as one draw (Section 5.2). Details: `tools/mfinder/README.md`.
+
+**Impact level: Wording.** The networks change by about a tenth of their edges, so every motif and
+centrality value is recomputed. Those numbers are reported in Sections 10 and 11. For this stage
+only the description of the network changes.
+
+### 9.4 Suggested article text
+
+**Data Pipeline.** Replace "Once we have our nodes, we draw edges between them by tracking every time
+one word follows another." with:
+
+> Once we have our nodes, we draw a directed edge from each word to the next word in the same
+> sentence. Punctuation is skipped, so words on either side of a comma are still linked, but no edge
+> crosses from one sentence into the next.
+
+(The following sentence, on edge weights, is replaced as given in Section 5.4.)
+
+**§3.4, Complex Network Analysis.** Replace "Edges represent the immediate co-occurrence of two words
+in the text. A directed edge is drawn A → B if Word A is immediately followed by Word B." with:
+
+> Each node is a lemma, so that inflected forms of one word share a node. Edges represent the
+> immediate co-occurrence of two words within a sentence: a directed edge is drawn A → B if word A is
+> immediately followed by word B in the same sentence, ignoring punctuation. Edges do not cross
+> sentence boundaries, and a word followed by itself does not form an edge.
+
+Replace "By mapping the entire novel in this manner" with "By mapping every sentence of the novel in
+this manner".
 
 ## 10. Motif Analysis
 
