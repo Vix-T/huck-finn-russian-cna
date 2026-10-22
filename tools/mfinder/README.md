@@ -49,6 +49,18 @@ Makefile's flags (`-O3 -DUNIX=1`). `build/` and `bin/` are gitignored. Built 202
 26 (Darwin 25.6.0, arm64), Apple clang 21.0.0: binary SHA-256
 `c0734777acaaa9e4badb1aeb8bac080edbfc3b2c3b467efb212eab4a051a8bb0`.
 
+## Verification (2026-10-21)
+
+1. Manual example network (`tests/data/mfinder_manual_example.txt`, manual Chapter 4): NREAL equals
+   the manual's counts and the igraph/networkx counts (`tests/test_mfinder.py`).
+2. Ru1, `-r 2`, seed 20261021, run twice: `_MAT_R.txt` byte-identical and `_OUT.txt` identical
+   apart from the runtime lines.
+3. Ru1 NREAL equals the igraph/networkx counts for all 13 triads
+   (`uv run python -m huckfinn_cna.networks --check-mfinder INPUT OUT`).
+
+Ru1 timing on this Mac (Apple Silicon): real network 1.20 minutes, 1.81–1.83 minutes per random
+network.
+
 ## Use
 
 `scripts/run_mfinder.sh TEXT R SEED` (flags from `config/pipeline.toml`, `[mfinder]`). Flags used,
