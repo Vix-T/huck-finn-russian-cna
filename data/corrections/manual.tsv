@@ -3,3 +3,4 @@ Ru1	2106	nо-овечьи	по-овечьи	OCR: Latin n + o for Cyrillic по (
 Ru2	687	c герцогом	с герцогом	OCR: Latin c as the preposition с (token has no Cyrillic letter, so rule e skips it)
 Ru3	766	посту	по сту	undo wrong rule i join: по сту раз (a hundred times each); pymorphy3 does not know сту
 Ru2	1054	Бот когда	Вот когда	OCR: Б for В in «Вот когда Людовик XVI собирался бежать»
+Ru5	853	Бот и вся	Вот и вся	OCR: Б for В in «Вот и вся моя история»

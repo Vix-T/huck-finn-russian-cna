@@ -16,7 +16,7 @@ tokenization with part-of-speech tagging, and network construction.
 
 **Text preparation** changes how the article should describe its data. The 1911 Engel'gardt text (Ru-1911) contains OCR damage, mainly words split by stray
 spaces. We repaired it, which reduces its vocabulary by 382 word types (1.8%). In the other four
-texts the change is at most 42 types (0.3%). We also found that the old cleaning step deleted the
+texts the change is at most 43 types (0.3%). We also found that the old cleaning step deleted the
 letter ё and fused hyphenated words, and we have replaced it. All article numbers are recomputed in
 the stages that follow, and each stage will report its old and new values.
 
@@ -186,7 +186,7 @@ Section 4:
 | Ru-1926-Anon | 48,208 | 48,208 | 10,291 | 10,288 | −3 | −0.0% |
 | Ru-1933-Chukovsky-(Ed.) | 63,217 | 63,194 | 12,689 | 12,683 | −6 | −0.0% |
 | Ru-1949-Braude | 91,768 | 91,761 | 14,939 | 14,936 | −3 | −0.0% |
-| Ru-1960-Daruzes | 92,298 | 92,136 | 14,399 | 14,357 | −42 | −0.3% |
+| Ru-1960-Daruzes | 92,298 | 92,136 | 14,399 | 14,356 | −43 | −0.3% |
 
 Here a word token is a run of Cyrillic letters, with internal hyphens joining the parts. This is the
 same definition for raw and prepared text, so the table isolates the effect of preparation. Of the
@@ -297,7 +297,7 @@ place of the sentence beginning "For the purposes of the report 'clean' data …
 > other translations do not include. Dashes, quotation marks and ellipses were normalized, ё was
 > written as е throughout, and hyphenated words (e.g. «кое-что») were kept as single words. These
 > steps reduced the vocabulary of Ru-1911 by 382 word types (1.8%) and of the other translations by
-> at most 42 types (0.3%). Lowercasing, lemmatization and stop-word removal follow as described
+> at most 43 types (0.3%). Lowercasing, lemmatization and stop-word removal follow as described
 > below.
 
 Add Korobov (2015)⁴ to the article's bibliography.
@@ -693,7 +693,7 @@ cleaning and lemmatizer.
 | Ru-1926-Anon | 5,836 | 5,589 | 31,254 | 31,112 | 28,095 | −10.1% | −9.7% |
 | Ru-1933-Chukovsky-(Ed.) | 6,665 | 6,733 | 40,160 | 39,988 | 35,586 | −11.4% | −11.0% |
 | Ru-1949-Braude | 7,634 | 7,808 | 49,719 | 49,671 | 45,375 | −8.7% | −8.6% |
-| Ru-1960-Daruzes | 7,335 | 7,500 | 51,216 | 50,980 | 46,336 | −9.5% | −9.1% |
+| Ru-1960-Daruzes | 7,335 | 7,499 | 51,216 | 50,978 | 46,335 | −9.5% | −9.1% |
 
 New nodes are those with at least one edge, comparable with the old count. A further 9–13 lemmas per
 translation occur only in one-word sentences or only next to themselves, and so have no edge.

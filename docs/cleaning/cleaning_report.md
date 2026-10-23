@@ -19,8 +19,8 @@ rationale: `docs/decisions.md`.
 | i. split words joined | 92 | 0 | 1 | 0 | 0 |
 | i2. split words joined by attestation (only if enabled) | 434 | 2 | 1 | 4 | 4 |
 | j. ё to е | 4 | 1 | 22 | 3 | 23 |
-| k. manual corrections | 1 | 2 | 1 | 0 | 0 |
-| **total** | 5062 | 2757 | 1423 | 4515 | 5024 |
+| k. manual corrections | 1 | 2 | 1 | 0 | 1 |
+| **total** | 5062 | 2757 | 1423 | 4515 | 5025 |
 
 ## Word tokens and types, before and after
 
@@ -33,7 +33,7 @@ Types are lowercased. *Before* is the raw text after BOM strip and newline norma
 | Ru2 | Ru-1926-Anon | 48208 | 48208 | +0 | 10291 | 10288 | -3 | -0.0% |
 | Ru3 | Ru-1933-Chukovsky-(Ed.) | 63217 | 63194 | -23 | 12689 | 12683 | -6 | -0.0% |
 | Ru4 | Ru-1949-Braude | 91768 | 91761 | -7 | 14939 | 14936 | -3 | -0.0% |
-| Ru5 | Ru-1960-Daruzes | 92298 | 92136 | -162 | 14399 | 14357 | -42 | -0.3% |
+| Ru5 | Ru-1960-Daruzes | 92298 | 92136 | -162 | 14399 | 14356 | -43 | -0.3% |
 
 ## Front matter removed (rule b)
 
@@ -100,7 +100,7 @@ Rule i2 is **ON** (`clean.attested_joins.apply`) and applied to the cleaned text
 | Ru2 | 2 | 2 | 10290 | 10288 | -2 | -0.0% |
 | Ru3 | 1 | 1 | 12683 | 12683 | +0 | +0.0% |
 | Ru4 | 4 | 4 | 14936 | 14936 | +0 | +0.0% |
-| Ru5 | 4 | 3 | 14357 | 14357 | +0 | +0.0% |
+| Ru5 | 4 | 3 | 14356 | 14356 | +0 | +0.0% |
 
 Review: `i2_preview.tsv` (all would-be joins), `i2_pairs.tsv` (joins per distinct pair), `i2_sample_Ru1.tsv` (100 joins, seed 20261020), `i2_applied_sample_Ru1.tsv` (40 applied joins, seed 20261021, 40 characters of context).
 

@@ -59,7 +59,7 @@ tokens as defined above (Latin-script words included).
 | Ru2 | 8868 | 9348 | 959 | 2 | 1 | 0.949 | 0.860 |
 | Ru3 | 11899 | 12473 | 1136 | 2 | 1 | 0.954 | 0.874 |
 | Ru4 | 15245 | 18010 | 1771 | 2 | 1 | 0.846 | 0.771 |
-| Ru5 | 15031 | 18541 | 1495 | 2 | 1 | 0.811 | 0.750 |
+| Ru5 | 15030 | 18541 | 1495 | 2 | 1 | 0.811 | 0.750 |
 
 ## Stanza: VerbForm of VERB and AUX tokens
 
@@ -112,7 +112,7 @@ Share of tokens tagged VERB or AUX; *none* = no VerbForm feature.
 | Ru2 | 8934 | 9125 | 972 | 2 | 1 | 0.979 | 0.885 |
 | Ru3 | 12012 | 12188 | 1153 | 2 | 1 | 0.986 | 0.900 |
 | Ru4 | 15363 | 17642 | 1798 | 2 | 1 | 0.871 | 0.790 |
-| Ru5 | 15271 | 18021 | 1518 | 2 | 1 | 0.847 | 0.782 |
+| Ru5 | 15270 | 18021 | 1518 | 2 | 1 | 0.847 | 0.782 |
 
 ## spaCy: VerbForm of VERB and AUX tokens
 
