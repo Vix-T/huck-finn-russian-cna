@@ -63,7 +63,9 @@ network.
 
 ## Use
 
-`scripts/run_mfinder.sh TEXT R SEED` (flags from `config/pipeline.toml`, `[mfinder]`). Flags used,
+`scripts/run_mfinder.sh TEXT R SEED [OUT_DIR]` (flags from `config/pipeline.toml`, `[mfinder]`).
+The final run is `scripts/run_mfinder_all.sh R` (all five texts in parallel, seeds from
+`[mfinder.final]`); progress: `scripts/mfinder_status.sh R`. The Ru1 runs above predate `-oi`. Flags used,
 as described in the manual (§2.3, §2.5):
 
 | Flag | Meaning |
@@ -73,6 +75,7 @@ as described in the manual (§2.3, §2.5):
 | `-f NAME` | output prefix; writes `NAME_OUT.txt` |
 | `-q` | quiet: nothing printed to the screen |
 | `-orall` | writes `NAME_MAT_R.txt`: the count of each subgraph in every random network (one row per subgraph ID, ascending; one column per random network; no ID column) |
+| `-oi` | writes `NAME_INTER.txt`: the full results after every random network, flushed each time. Used only for progress (`scripts/mfinder_status.sh`); for a fixed seed `_MAT_R` and `_OUT` are unchanged (`tests/test_mfinder.py`). About 2 KB per random network |
 
 Not used: `-omem` (member lists, partial samples of at most `-maxmem`, default 1000), and `-nu`
 (see below).

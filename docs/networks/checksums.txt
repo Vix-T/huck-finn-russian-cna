@@ -1,0 +1,14 @@
+# SHA-256 of the mfinder input networks (networks-v1), from `shasum -a 256` after `uv run python -m huckfinn_cna.networks`
+# Built with the Roman-numeral rule (docs/decisions.md, decision 27). Check: shasum -a 256 -c docs/networks/checksums.txt
+# scripts/run_mfinder_all.sh refuses to start unless every line checks.
+#
+# The Ru1 r=100 preview run (data/interim/mfinder/Ru1_r100_s20261021, docs/motifs/motif_report.md) ran on the
+# pre-fix Ru1 network, SHA-256 8d530d798478e3f5477d84721d4bf383cbb756f0295bf9b6d061e03ee7a232a5:
+# 60,480 edges and 9,881 nodes. The current Ru1 network has 60,473 edges and 9,876 nodes. 21 distinct
+# edges differ (14 that touched iii, iv, xiv, xvi or xvii removed; 7 new edges joining the words either side
+# of a numeral, e.g. людовик -> собраться). No edge count changed otherwise.
+32197cdec62bb52ff4308862a5938cd7f193c341f6feec1725905009b10d951e  data/interim/networks/Ru1_mfinder.txt
+f7b53dd0029df9305807cd6eb470e8c5de579172d253283e25bb7b92c16941cd  data/interim/networks/Ru2_mfinder.txt
+25c001f1bae3463bcb991f3614429c1c0991834c634a5ea4797bf6e2e0e75f6b  data/interim/networks/Ru3_mfinder.txt
+5eeb99241dae9eac0e0660693b45a41b9feabd769bfdc1323b76ba2dc6c3f4e3  data/interim/networks/Ru4_mfinder.txt
+1079f50ada8ee040564c769e19756a3582144a3277d324788ad0d4c89d231b71  data/interim/networks/Ru5_mfinder.txt

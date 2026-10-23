@@ -2,22 +2,23 @@
 # Run mfinder (tools/mfinder/bin/mfinder, built by tools/mfinder/build.sh) on one text's network.
 #
 # Input:  data/interim/networks/TEXT_mfinder.txt   (from `uv run python -m huckfinn_cna.networks`)
-# Output: data/interim/mfinder/TEXT_r{R}_s{SEED}/
+# Output: OUT_DIR, default data/interim/mfinder/TEXT_r{R}_s{SEED}/
 #           TEXT_r{R}_s{SEED}_OUT.txt     mfinder summary (NREAL, random mean and SD, Z, p)
 #           TEXT_r{R}_s{SEED}_MAT_R.txt   count of every subgraph in every random network (-orall)
+#           TEXT_r{R}_s{SEED}_INTER.txt   results after each random network (-oi; progress)
 #           mfinder_console.txt           anything mfinder printed (normally nothing: -q)
 #           run.log                       command, checksums, start and end times, exit code
 # Paths, motif size and flags come from config/pipeline.toml ([paths], [networks], [mfinder]).
 # An existing output directory is never overwritten.
 #
-# Usage: scripts/run_mfinder.sh TEXT R SEED      e.g. scripts/run_mfinder.sh Ru1 100 20261021
+# Usage: scripts/run_mfinder.sh TEXT R SEED [OUT_DIR]      e.g. scripts/run_mfinder.sh Ru1 100 20261021
 set -euo pipefail
 
-if [ $# -ne 3 ]; then
-    echo "usage: $0 TEXT R SEED" >&2
+if [ $# -lt 3 ] || [ $# -gt 4 ]; then
+    echo "usage: $0 TEXT R SEED [OUT_DIR]" >&2
     exit 2
 fi
-text=$1 r=$2 seed=$3
+text=$1 r=$2 seed=$3 out_arg=${4:-}
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo"
 
@@ -42,7 +43,7 @@ input="$networks_dir/${text}_mfinder.txt"
 [ -x "$binary" ] || { echo "no mfinder binary $binary (run: tools/mfinder/build.sh)" >&2; exit 2; }
 
 run_name="${text}_r${r}_s${seed}"
-out="$out_root/$run_name"
+out=${out_arg:-$out_root/$run_name}
 if [ -e "$out" ]; then echo "$out already exists; not overwriting" >&2; exit 2; fi
 mkdir -p "$out"
 

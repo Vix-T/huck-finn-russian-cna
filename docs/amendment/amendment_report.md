@@ -1,7 +1,7 @@
 # Amendment Report: Rebuilt Pipeline for *Comparative Stylometric Analysis of Mark Twain's "The Adventures of Huckleberry Finn" Russian Translations*
 
 **Vix Talbot**
-10-2026 (last updated 2026-10-21)
+10-2026 (last updated 2026-10-22)
 
 Companion to *Final Report 3*¹ (11-2025). This is a living report: a section is added at the end of
 each pipeline stage, and the Executive Summary is updated with it.
@@ -51,6 +51,11 @@ libraries that agree on every value, with mfinder 1.2 kept as a cross-check, usi
 seed. The motif and centrality values are recomputed in the next stages. For this stage only the
 article's description of the network changes (Data Pipeline, §3.4).
 
+**Motif analysis (preliminary, Ru-1911 only, 100 random networks).** On the new network no motif
+changes sign relative to Figure 9. Two motifs that were not significant in Figure 9 (74 and 108) now
+are, and the significance profile keeps its shape. The final run uses 1,000 random networks for all
+five translations (Section 10).
+
 ### Changes at a glance
 
 | Stage | Change | Impact level | Article section affected |
@@ -74,6 +79,9 @@ article's description of the network changes (Data Pipeline, §3.4).
 | Network Construction | Edges restricted to sentences (old: across sentence boundaries); 9–11% fewer edges | Wording | Data Pipeline; §3.4 |
 | Network Construction | Nodes are Stanza lemmas (ё → е); node counts −4% to +2% | Wording | §3.4 |
 | Network Construction | Exact motif counts in Python (igraph = networkx); mfinder 1.2 kept as cross-check with a recorded seed | None | — |
+| Network Construction | Roman numerals (XVI, III in regnal names) treated as numbers, not words; 1–7 edges per translation | None | — |
+| Audit of Previous Motif Results | mfinder's clock seeding on 64-bit machines never initialized its generator, so the 2025 runs cannot be repeated; new runs use a recorded seed | Wording | §3.4.1 |
+| Motif Analysis (preliminary) | Ru-1911, 100 random networks: no sign changes vs Figure 9; motifs 74 and 108 become significant | To be decided | §3.4.1, Figures 9–10 |
 
 ---
 
@@ -333,6 +341,11 @@ settings give different values. The archived outputs contain two mfinder runs fr
 input networks and settings (3-node motifs, 100 randomizations): the run behind Figure 9
 (`_input_OUT`, Aug–Oct 2025) and a second run (`_stats_OUT`, Oct 23–25, 2025). Their Z-scores differ
 by up to 1.52 for the same motif and text, which reflects run-to-run randomization noise.
+
+Neither run can be repeated. The original mfinder 1.2 seeds its random generator from the clock in a
+way that, on 64-bit machines, never runs the generator's setup step, so the randomization of the 2025
+runs cannot be reproduced. The rebuilt pipeline patches mfinder to take an explicit seed, which is
+recorded with every run (`tools/mfinder/seed.patch`; Section 9.3).
 
 **Effect.** Largest absolute difference between the two archived 2025 runs, over the 13 motifs:
 
@@ -676,11 +689,11 @@ cleaning and lemmatizer.
 
 | Translation | Old nodes | New nodes | Old edges | New lemmas, crossing | New edges | Change vs old | Due to sentence boundaries |
 |---|---|---|---|---|---|---|---|
-| Ru-1911-Engelgardt | 9,822 | 9,868 | 67,577 | 66,988 | 60,480 | −10.5% | −9.7% |
-| Ru-1926-Anon | 5,836 | 5,593 | 31,254 | 31,116 | 28,099 | −10.1% | −9.7% |
-| Ru-1933-Chukovsky-(Ed.) | 6,665 | 6,736 | 40,160 | 39,992 | 35,590 | −11.4% | −11.0% |
-| Ru-1949-Braude | 7,634 | 7,809 | 49,719 | 49,673 | 45,376 | −8.7% | −8.7% |
-| Ru-1960-Daruzes | 7,335 | 7,503 | 51,216 | 50,983 | 46,339 | −9.5% | −9.1% |
+| Ru-1911-Engelgardt | 9,822 | 9,863 | 67,577 | 66,981 | 60,473 | −10.5% | −9.7% |
+| Ru-1926-Anon | 5,836 | 5,590 | 31,254 | 31,113 | 28,096 | −10.1% | −9.7% |
+| Ru-1933-Chukovsky-(Ed.) | 6,665 | 6,733 | 40,160 | 39,988 | 35,586 | −11.4% | −11.0% |
+| Ru-1949-Braude | 7,634 | 7,808 | 49,719 | 49,671 | 45,375 | −8.7% | −8.6% |
+| Ru-1960-Daruzes | 7,335 | 7,500 | 51,216 | 50,980 | 46,336 | −9.5% | −9.1% |
 
 New nodes are those with at least one edge, comparable with the old count. A further 9–13 lemmas per
 translation occur only in one-word sentences or only next to themselves, and so have no edge.
@@ -691,10 +704,10 @@ network still ranks third, so Section 5.3 stands.
 
 | Translation | Mutual pairs | Self-loops dropped |
 |---|---|---|
-| Ru-1911-Engelgardt | 3,211 | 51 |
-| Ru-1926-Anon | 1,664 | 62 |
+| Ru-1911-Engelgardt | 3,212 | 51 |
+| Ru-1926-Anon | 1,665 | 62 |
 | Ru-1933-Chukovsky-(Ed.) | 2,095 | 99 |
-| Ru-1949-Braude | 3,026 | 110 |
+| Ru-1949-Braude | 3,027 | 110 |
 | Ru-1960-Daruzes | 3,407 | 125 |
 
 *Mutual pairs*: pairs of words linked in both directions (A → B and B → A). *Self-loops dropped*:
@@ -741,7 +754,51 @@ this manner".
 
 ## 10. Motif Analysis
 
-To be completed.
+### 10.1 Preliminary: Ru-1911, old vs new (one text, 100 random networks)
+
+**Status: preliminary.** This compares one translation, Ru-1911-Engelgardt, from one new mfinder run
+with 100 random networks (seed 20261021) against Figure 9. The final analysis uses 1,000 random
+networks for all five translations. This run also used the Ru-1911 network from before Roman numerals
+were removed from the word tokens (decision 27; 21 of 60,480 distinct edges differ, and the final run
+uses the corrected network). Full statistics: `docs/motifs/motif_report.md`.
+
+**Old.** Figure 9 (the `input_OUT` run, 100 random networks). Its network linked words across
+sentence and paragraph boundaries and was built from the old cleaning and pymorphy2 lemmas
+(Sections 4 and 9).
+
+**New.** The sentence-bounded network of Section 9. Z is recomputed from mfinder's count in every
+random network and equals mfinder's printed Z. mfinder's count in the real network equals the exact
+igraph/networkx count for all 13 subgraphs. SP is the significance profile, Z/‖Z‖ over the 13
+subgraphs. SE(Z) is the approximate standard error of a Z-score from 100 random networks,
+√((1 + Z²/2)/100). A star marks |Z| > 2.0, as in Figure 9.
+
+| Motif | Old Z | New Z | ΔZ | SE(new Z) | Old SP | New SP | ΔSP | Change |
+|---|---|---|---|---|---|---|---|---|
+| 6 | 5.30* | 7.84* | +2.54 | 0.56 | +0.274 | +0.335 | +0.061 | |
+| 12 | 6.22* | 8.32* | +2.10 | 0.60 | +0.322 | +0.355 | +0.034 | |
+| 14 | −6.29* | −5.41* | +0.88 | 0.40 | −0.326 | −0.231 | +0.094 | |
+| 36 | 2.86* | 3.40* | +0.54 | 0.26 | +0.148 | +0.145 | −0.003 | |
+| 38 | −5.92* | −7.03* | −1.11 | 0.51 | −0.306 | −0.300 | +0.006 | |
+| 46 | 7.53* | 10.38* | +2.85 | 0.74 | +0.390 | +0.444 | +0.054 | |
+| 74 | 0.18 | 4.98* | +4.80 | 0.37 | +0.009 | +0.213 | +0.203 | becomes significant |
+| 78 | −7.43* | −5.22* | +2.21 | 0.38 | −0.384 | −0.223 | +0.162 | |
+| 98 | −4.59* | −6.27* | −1.68 | 0.45 | −0.238 | −0.268 | −0.031 | |
+| 102 | −3.47* | −7.16* | −3.69 | 0.52 | −0.180 | −0.306 | −0.126 | |
+| 108 | −1.34 | −5.89* | −4.55 | 0.43 | −0.069 | −0.252 | −0.182 | becomes significant |
+| 110 | 7.30* | 5.44* | −1.86 | 0.40 | +0.378 | +0.232 | −0.145 | |
+| 238 | 4.87* | 3.51* | −1.36 | 0.27 | +0.252 | +0.150 | −0.102 | |
+
+**Effect (preliminary).** No motif changes sign. Two motifs become significant: 74 (111D;
+Z 0.18 → 4.98) and 108 (120D; −1.34 → −5.89). Every subgraph now has |Z| > 2. The Benjamini–Hochberg
+q-values from the empirical p-values agree: all 13 subgraphs have q < 0.05, seven over- and six
+under-represented. Seven differences exceed 2 (motifs 6, 12, 46, 74, 78, 102, 108). That is well
+beyond the standard error of about 0.3–0.7 and beyond the 1.52 spread between the two archived 2025
+runs (Section 5.2), so they come from the change of network, not from randomization. The smaller
+differences (motifs 14, 36, 38, 98, 110, 238) are within the range that run-to-run variation alone
+produced in 2025. The significance profile keeps its overall shape: the same seven subgraphs are
+positive and the same six negative. Motif 46 (120U) is still the most over-represented.
+
+**Impact level: to be decided** once all five translations have been run with 1,000 random networks.
 
 ## 11. Betweenness Centrality
 

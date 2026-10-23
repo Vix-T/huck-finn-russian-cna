@@ -47,6 +47,15 @@ class BuildTests(unittest.TestCase):
         self.assertIn(("том", "гек"), self.edges)          # across a comma
         self.assertEqual(self.sentences[1], ["уйти", "весь", "все", "все"])  # «1911» skipped
 
+    def test_roman_numeral_skipped_like_digits(self):
+        # «про Людовика XVI и» -> XVI skipped, so «людовик» links to «и»
+        rows = [tok(1, "про"), tok(1, "Людовика", "Людовик"), tok(1, "XVI", word=False), tok(1, "И", "и")]
+        self.assertEqual(nw.sentence_lemmas(rows, CHAR_MAP), [["про", "людовик", "и"]])
+
+    def test_stale_is_word_column_fails(self):
+        with self.assertRaises(nw.NetworkError):
+            nw.sentence_lemmas([tok(1, "Ричарда", "Ричард"), tok(1, "III", word=True)], CHAR_MAP)
+
     def test_yo_mapped_and_self_loop_dropped(self):
         # «всё» -> «все», which is followed by «все»: one self-loop, dropped from the edges
         self.assertEqual(self.loops, Counter({("все", "все"): 1}))

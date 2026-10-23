@@ -1,6 +1,6 @@
 """Word-adjacency networks: data/interim/tagged/Ru#.tsv -> data/interim/networks/.
 
-One directed network per text. Nodes are the lemmas of word tokens (is_word = 1), lowercased
+One directed network per text. Nodes are the lemmas of word tokens (is_word = 1; Roman numerals are not words), lowercased
 and mapped by [networks].lemma_char_map. Within each sentence there is an edge from every word
 to the next word; tokens that are not words (punctuation, numbers, abbreviations) are skipped,
 so words separated by a comma are still linked. No edge crosses a sentence boundary. Self-loops
@@ -36,7 +36,7 @@ import igraph as ig
 import networkx as nx
 
 from huckfinn_cna.config import DEFAULT_CONFIG, load_config, repo_path
-from huckfinn_cna.tag import read_tagged
+from huckfinn_cna.tag import is_word, read_tagged
 
 
 # A triad has three nodes; networkx's triadic census exists only for this size, so
@@ -103,11 +103,19 @@ def node_label(lemma: str, char_map: dict[str, str]) -> str:
 
 
 def sentence_lemmas(rows: list[dict], char_map: dict[str, str]) -> list[list[str]]:
-    """Node labels of the word tokens of each sentence, in text order."""
+    """Node labels of the word tokens of each sentence, in text order.
+
+    The is_word column must equal tag.is_word(token); a tagged file written under an older word rule
+    fails the run (re-tag it).
+    """
     sentences: dict[str, list[str]] = {}
     for r in rows:
         words = sentences.setdefault(r["sent_id"], [])
-        if r["is_word"] == "1":
+        word = is_word(r["token"])
+        if (r["is_word"] == "1") != word:
+            raise NetworkError(f"is_word column {r['is_word']} for {r['token']!r} in sentence {r['sent_id']} "
+                               "disagrees with tag.is_word; re-tag (delete data/interim/tagged/Ru#.tsv)")
+        if word:
             if not r["lemma"]:
                 raise NetworkError(f"empty lemma for word token {r['token']!r} in sentence {r['sent_id']}")
             words.append(node_label(r["lemma"], char_map))

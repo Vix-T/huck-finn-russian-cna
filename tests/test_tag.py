@@ -33,6 +33,17 @@ class HelperTests(unittest.TestCase):
         for w in ("—", ",", "500", "т.", "-то", "что-"):
             self.assertFalse(t.is_word(w), w)
 
+    def test_roman_numerals_are_not_words(self):
+        for w in ("XVI", "III", "IV", "XVII", "XIV", "MCMXI"):
+            self.assertTrue(t.is_roman_numeral(w), w)
+            self.assertFalse(t.is_word(w), w)
+        # Cyrillic «И», «Х», «ХVI»-like look-alikes, spelled-out numbers and ordinary words stay words.
+        for w in ("И", "и", "Х", "С", "шестнадцатый", "Людовика", "Ричарда", "Maggiore", "acta", "xvi", "Vi"):
+            self.assertFalse(t.is_roman_numeral(w), w)
+            self.assertTrue(t.is_word(w), w)
+        for w in ("", "IIII", "VV", "IC"):
+            self.assertFalse(t.is_roman_numeral(w), w)
+
     def test_is_punct(self):
         for p in ("—", "«", "…", "!", "?!"):
             self.assertTrue(t.is_punct(p), p)

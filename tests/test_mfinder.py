@@ -50,13 +50,14 @@ class ParseTests(unittest.TestCase):
 
 @unittest.skipUnless(BINARY.exists(), "mfinder not built (tools/mfinder/build.sh)")
 class BinaryTests(unittest.TestCase):
-    def run_mfinder(self, out_dir: str, env_seed: str | None, r: int = 10):
+    def run_mfinder(self, out_dir: str, env_seed: str | None, r: int = 10, flags: list[str] | None = None):
         env = {k: v for k, v in os.environ.items() if k != SEED_ENV}
         if env_seed is not None:
             env[SEED_ENV] = env_seed
         prefix = Path(out_dir) / "example"
+        flags = CONFIG["mfinder"]["extra_flags"] if flags is None else flags
         proc = subprocess.run([str(BINARY), str(EXAMPLE), "-s", str(nw.TRIAD_SIZE), "-r", str(r), "-f", str(prefix),
-                               *CONFIG["mfinder"]["extra_flags"]], env=env, capture_output=True, text=True)
+                               *flags], env=env, capture_output=True, text=True)
         return proc, Path(f"{prefix}_OUT.txt"), Path(f"{prefix}_MAT_R.txt")
 
     def test_fails_without_seed(self):
@@ -84,6 +85,22 @@ class BinaryTests(unittest.TestCase):
             mat_c = self.run_mfinder(b, "20261022")[2].read_text()
         self.assertEqual(mat_a, mat_b)
         self.assertNotEqual(mat_a, mat_c)
+
+    def test_intermediate_output_changes_no_result(self):
+        # -oi (progress for scripts/mfinder_status.sh) must leave _MAT_R and _OUT unchanged, and write one
+        # section per random network to _INTER.txt.
+        from huckfinn_cna.mfinder_status import networks_done
+        flags = CONFIG["mfinder"]["extra_flags"]
+        self.assertIn("-oi", flags)
+        without = [f for f in flags if f != "-oi"]
+        with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
+            _, out_a, mat_a = self.run_mfinder(a, "20261023", r=20, flags=without)
+            _, out_b, mat_b = self.run_mfinder(b, "20261023", r=20, flags=flags)
+            self.assertEqual(mat_a.read_text(), mat_b.read_text())
+            strip = lambda p: [ln for ln in p.read_text(encoding="latin-1").splitlines() if "runtime" not in ln]
+            self.assertEqual(strip(out_a), strip(out_b))
+            self.assertEqual(networks_done(Path(b) / "example_INTER.txt"), 20)
+            self.assertFalse((Path(a) / "example_INTER.txt").exists())
 
 
 if __name__ == "__main__":

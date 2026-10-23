@@ -97,7 +97,7 @@ parameters in config `[tag]` and `[pos_check]`.
     whitespace, each token matches the text at its offsets, and no hyphenated word is split.
 18. **Columns.** `para_id`: 1-based index of the paragraph (non-empty line); `sent_id`: 1-based across
     the text; `tok_id`: 1-based within the sentence. `is_word`: letters only, any script, internal
-    hyphens allowed. `is_punct`: every character in a Unicode punctuation category. `is_content`: Stanza
+    hyphens allowed, and not a Roman numeral (decision 27). `is_punct`: every character in a Unicode punctuation category. `is_content`: Stanza
     UPOS in `tag.content_upos` (NOUN, VERB, ADJ, ADV, PROPN). `verbform` / `spacy_verbform`: the VerbForm
     value from each tagger's features. `spacy_feats` is kept so the VerbForm breakdown can be given for
     both taggers.
@@ -129,7 +129,7 @@ parameters in config `[networks]` and `[mfinder]`.
     2026-10-21, in line with decision 1); this merges «всё» into «все». Every word lemma is a node,
     including the 9–13 per text that end up with no edge.
 24. **Sentence-bounded edges.** Within each sentence (Stanza `sent_id`), each word links to the next
-    word. Tokens that are not words (punctuation, and the 14–72 numbers, abbreviations and OCR
+    word. Tokens that are not words (punctuation, and the 19–84 numbers, abbreviations and OCR
     fragments per text) are skipped, so words on either side of a comma are linked. No edge crosses a
     sentence boundary. Self-loops are dropped and counted. Edge counts are kept for weighted measures
     (decision 8); the motif graph is unweighted and mfinder's weight column is 1.
@@ -146,3 +146,43 @@ parameters in config `[networks]` and `[mfinder]`.
     read from `MFINDER_SEED` (integer 1..2147483646; the run fails if it is missing or invalid)
     instead of the clock. Flags: `-s 3 -r N -f NAME -q -orall`; `-orall` keeps every random
     network's counts for empirical p-values. `-omem` and `-nu` are not used.
+
+## Roman numerals, motif statistics and the final mfinder run (2026-10-22)
+
+Plan: `docs/plan/motif_runs.md`.
+
+27. **Roman numerals are not words** (project owner's decision, 2026-10-22). A numeral written as a
+    numeral is not a word; a spelled-out number is. Arabic digits already failed `is_word`; now a token
+    that is a well-formed Roman numeral in capital Latin letters (`tag.ROMAN_NUMERAL_RE`: XVI, III, IV,
+    …) also gets `is_word = 0`, so the network skips it like «1911» and links the words on either side
+    («Людовика XVI и» → людовик → и). Cyrillic «И», «Х» and lowercase Latin never match. One function,
+    `tag.is_word`, writes the column, and `networks.py` calls it on every token and fails if a tagged
+    file disagrees (stale tags). Affected tokens, all regnal numbers tagged ADJ by Stanza: Ru1 12, Ru2 4,
+    Ru3 6, Ru4 5 (Ru4 mostly spells them out, «Людовике Шестнадцатом»), Ru5 4. All texts were re-tagged:
+    apart from those `is_word` cells the tagged files are byte-identical. Networks lose 1–7 distinct
+    edges and 1–5 nodes per text (Ru1: 60,480 → 60,473 edges; 21 distinct edges differ). In the POS
+    re-check a few shares move by 0.1 percentage point; no ratio, rank or interval changes. Checksums
+    of the new networks: `docs/networks/checksums.txt`. The Ru1 r=100 preview
+    (`Ru1_r100_s20261021`) ran on the pre-fix Ru1 network.
+28. **Motif statistics** (`src/huckfinn_cna/motifs.py`, config `[motifs]`). Computed from mfinder's
+    per-random-network counts (`-orall`), not its printed summary. Null mean and SD over the R random
+    networks, SD with ddof = 1 (mfinder's convention; the recomputed Z must equal mfinder's printed Z
+    within 0.006). Empirical one-sided p = (b + 1)/(R + 1), b = random networks with a count ≥ N_real
+    (over-representation) or ≤ N_real (under); ties count on both sides. Benjamini–Hochberg q-values
+    over the 13 triads, separately for each direction; "significant" means q < 0.05 (`fdr_alpha`).
+    Abundance ratio (N_real − mean)/(N_real + mean + 4) (Milo et al. 2004). Concentration N_real / ΣN_real
+    over the 13 triads. SP = Z/‖Z‖. SE(Z) ≈ √((1 + Z²/2)/R) (delta method for Z = (x − m)/s with a
+    normal null: Var m = s²/R, Var s ≈ s²/(2R)). Flags: N_real < 5 or null mean < 5, mfinder's
+    sentinel 888888, SD = 0. N_real must equal the igraph/networkx count of the run's input network,
+    identified by the SHA-256 in `run.log`. Old-vs-new: old Z from Figure 9 (`report3_fig9_zscores.csv`);
+    a significance flip is a change in whether |Z| > 2.0, the Figure 9 star rule.
+29. **Final-run seeds** (config `[mfinder.final]`). Master seed **20261023**, separate from the POS
+    bootstrap seed (20261022). Per text: numpy `SeedSequence([20261023, text index])`
+    `.generate_state(1, uint64)[0] mod 2147483646 + 1`, text index 0-based in `corpus.texts`
+    (`src/huckfinn_cna/mfinder_seeds.py`; a test checks config against the derivation):
+    Ru1 1089013924, Ru2 2088918129, Ru3 751178630, Ru4 829752018, Ru5 1779418725.
+30. **Final run** (`scripts/run_mfinder_all.sh R`). R = 1000 random networks per text, all five texts
+    in parallel, each through `scripts/run_mfinder.sh` into `data/interim/mfinder/final/TEXT_r{R}/`.
+    The script refuses to start unless the networks match `docs/networks/checksums.txt`. mfinder now
+    also gets `-oi` (results after every random network, flushed), which `scripts/mfinder_status.sh`
+    counts for progress; a test shows `-oi` leaves `_MAT_R` and `_OUT` unchanged for a fixed seed.

@@ -31,6 +31,9 @@ COLUMNS = ["text", "para_id", "sent_id", "tok_id", "token", "lemma", "upos", "fe
 
 # A word: letters only, internal hyphens joining parts (что-то, кое-как). Any script.
 WORD_RE = re.compile(r"[^\W\d_]+(?:-[^\W\d_]+)*")
+# A Roman numeral in capital Latin letters (XVI, III, IV): a numeral written as a numeral, so not a
+# word, like 1911. Spelled-out numbers («шестнадцатый») are words. Cyrillic «И», «Х» never match.
+ROMAN_NUMERAL_RE = re.compile(r"(?=[IVXLCDM])M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})")
 # Hyphenated words in the text, merged into and checked to be single tokens. A run that touches a
 # dangling hyphen (OCR line-break residue left by cleaning, e.g. «Алексан- дер») is not a word.
 HYPHENATED_RE = re.compile(r"(?<![\w-])[^\W\d_]+(?:-[^\W\d_]+)+(?![\w-])")
@@ -63,8 +66,14 @@ def read_paragraphs(path: Path) -> list[str]:
     return [ln for ln in path.read_text(encoding="utf-8").split("\n") if ln.strip()]
 
 
+def is_roman_numeral(token: str) -> bool:
+    return ROMAN_NUMERAL_RE.fullmatch(token) is not None
+
+
 def is_word(token: str) -> bool:
-    return WORD_RE.fullmatch(token) is not None
+    """Letters only (hyphens inside), and not a numeral: Roman numerals are skipped like Arabic digits.
+    Used for the is_word column and by the network stage."""
+    return WORD_RE.fullmatch(token) is not None and not is_roman_numeral(token)
 
 
 def is_punct(token: str) -> bool:
