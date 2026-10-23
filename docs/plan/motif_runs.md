@@ -56,7 +56,7 @@ preview ran on the pre-fix network (give the number of edges that changed). Reco
 
 ## Status (2026-10-22)
 
-Items 1–3 done, and item 4 up to the launch (commit `1418d93`, plus docs; tag `networks-v1`).
+Items 1–3 done, and item 4 up to the launch (tag `networks-v1`).
 
 **Dress rehearsal** (`scripts/run_mfinder_all.sh 2`, 2026-10-22 20:33–20:39, five texts in parallel):
 all five exited 0; `motifs.py` on all five outputs: N_real equals igraph/networkx for all 13 triads in
@@ -77,3 +77,10 @@ five-way parallel load (rounded, 2 random networks each, so rough):
 
 Ru1 alone ran at 1.92 min per random network (r = 100 preview), so Ru1 and Ru4 should speed up as
 the smaller texts finish; Ru1's finish is likely between Sun 03:30 and 07:00.
+
+**Ru2 correction** (2026-10-22, after the dress rehearsal): OCR «Бот когда» → «Вот когда» (raw line
+1054, `data/corrections/manual.tsv`). Only Ru2's network changed (28,096 → 28,095 edges). The Ru2
+rehearsal was re-run on the corrected network (`final/Ru2_r2`, 52 s alone; the earlier output is in
+`final/superseded/`): N_real equals igraph for all 13 triads. Not yet fixed: the same OCR error in
+Ru5, raw line 853, «Бот и вся моя история».
+
