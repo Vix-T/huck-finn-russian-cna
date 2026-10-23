@@ -7,8 +7,11 @@
 # 60,480 edges and 9,881 nodes. The current Ru1 network has 60,473 edges and 9,876 nodes. 21 distinct
 # edges differ (14 that touched iii, iv, xiv, xvi or xvii removed; 7 new edges joining the words either side
 # of a numeral, e.g. людовик -> собраться). No edge count changed otherwise.
+#
+# Ru2 rebuilt 2026-10-22 after the manual correction «Бот когда» -> «Вот когда» (raw line 1054): 28,096 -> 28,095
+# edges, 5,600 -> 5,599 nodes (бот -> когда removed; вот -> когда now 3 occurrences). Ru1, Ru3-Ru5 unchanged.
 32197cdec62bb52ff4308862a5938cd7f193c341f6feec1725905009b10d951e  data/interim/networks/Ru1_mfinder.txt
-f7b53dd0029df9305807cd6eb470e8c5de579172d253283e25bb7b92c16941cd  data/interim/networks/Ru2_mfinder.txt
+2ae2a26aeb86e08704df9364dd2d5e840b4155bcbc8d3b035e32e5b531831d0a  data/interim/networks/Ru2_mfinder.txt
 25c001f1bae3463bcb991f3614429c1c0991834c634a5ea4797bf6e2e0e75f6b  data/interim/networks/Ru3_mfinder.txt
 5eeb99241dae9eac0e0660693b45a41b9feabd769bfdc1323b76ba2dc6c3f4e3  data/interim/networks/Ru4_mfinder.txt
 1079f50ada8ee040564c769e19756a3582144a3277d324788ad0d4c89d231b71  data/interim/networks/Ru5_mfinder.txt
