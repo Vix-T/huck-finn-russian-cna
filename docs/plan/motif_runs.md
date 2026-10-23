@@ -53,3 +53,27 @@ preview ran on the pre-fix network (give the number of edges that changed). Reco
 - Check free disk space against the expected `-orall` output size.
 - Run the tests, commit, then tag `networks-v1` (don't push).
 - Give the exact caffeinate Terminal command for Friday and the status command.
+
+## Status (2026-10-22)
+
+Items 1–3 done, and item 4 up to the launch (commit `1418d93`, plus docs; tag `networks-v1`).
+
+**Dress rehearsal** (`scripts/run_mfinder_all.sh 2`, 2026-10-22 20:33–20:39, five texts in parallel):
+all five exited 0; `motifs.py` on all five outputs: N_real equals igraph/networkx for all 13 triads in
+every text, recomputed Z equals mfinder's Z, no flags. Output per text at R = 2: `_INTER.txt` about
+1.35 KB per random network, `_MAT_R.txt` about 13 × 8 bytes per random network, so R = 1000 needs
+about 1.5 MB per text (free disk: 820 GiB).
+
+**Estimated finish for R = 1000 from Fri 23 Oct 19:30**, from mfinder's per-network times under
+five-way parallel load (rounded, 2 random networks each, so rough):
+
+| Text | Real network | Per random network | Total | Estimated finish |
+|---|---|---|---|---|
+| Ru2 | 15 s | 24.5 s | 6.8 h | Sat 24 Oct 02:20 |
+| Ru3 | 26 s | 37 s | 10.3 h | Sat 24 Oct 05:45 |
+| Ru5 | 59 s | 1.48 min | 24.7 h | Sat 24 Oct 20:10 |
+| Ru4 | 1.15 min | 1.85 min | 30.9 h | Sun 25 Oct 02:20 |
+| Ru1 | 1.45 min | 2.12 min | 35.4 h | Sun 25 Oct 06:50 |
+
+Ru1 alone ran at 1.92 min per random network (r = 100 preview), so Ru1 and Ru4 should speed up as
+the smaller texts finish; Ru1's finish is likely between Sun 03:30 and 07:00.

@@ -61,6 +61,9 @@ Makefile's flags (`-O3 -DUNIX=1`). `build/` and `bin/` are gitignored. Built 202
 Ru1 timing on this Mac (Apple Silicon): real network 1.20 minutes, 1.81–1.83 minutes per random
 network.
 
+Five texts in parallel (`scripts/run_mfinder_all.sh 2`, 2026-10-22), per random network: Ru1 2.12 min,
+Ru2 24.5 s, Ru3 37 s, Ru4 1.85 min, Ru5 1.48 min; real network 15 s (Ru2) to 1.45 min (Ru1).
+
 ## Use
 
 `scripts/run_mfinder.sh TEXT R SEED [OUT_DIR]` (flags from `config/pipeline.toml`, `[mfinder]`).
@@ -75,7 +78,7 @@ as described in the manual (§2.3, §2.5):
 | `-f NAME` | output prefix; writes `NAME_OUT.txt` |
 | `-q` | quiet: nothing printed to the screen |
 | `-orall` | writes `NAME_MAT_R.txt`: the count of each subgraph in every random network (one row per subgraph ID, ascending; one column per random network; no ID column) |
-| `-oi` | writes `NAME_INTER.txt`: the full results after every random network, flushed each time. Used only for progress (`scripts/mfinder_status.sh`); for a fixed seed `_MAT_R` and `_OUT` are unchanged (`tests/test_mfinder.py`). About 2 KB per random network |
+| `-oi` | writes `NAME_INTER.txt`: the full results after every random network, flushed each time. Used only for progress (`scripts/mfinder_status.sh`); for a fixed seed `_MAT_R` and `_OUT` are unchanged (`tests/test_mfinder.py`). About 1.35 KB per random network for these networks |
 
 Not used: `-omem` (member lists, partial samples of at most `-maxmem`, default 1000), and `-nu`
 (see below).
