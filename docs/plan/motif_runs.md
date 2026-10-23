@@ -81,6 +81,11 @@ the smaller texts finish; Ru1's finish is likely between Sun 03:30 and 07:00.
 **Ru2 correction** (2026-10-22, after the dress rehearsal): OCR «Бот когда» → «Вот когда» (raw line
 1054, `data/corrections/manual.tsv`). Only Ru2's network changed (28,096 → 28,095 edges). The Ru2
 rehearsal was re-run on the corrected network (`final/Ru2_r2`, 52 s alone; the earlier output is in
-`final/superseded/`): N_real equals igraph for all 13 triads. Not yet fixed: the same OCR error in
-Ru5, raw line 853, «Бот и вся моя история».
+`final/superseded/`): N_real equals igraph for all 13 triads.
+
+**Ru5 correction** (2026-10-23): a sweep of all five cleaned texts for standalone «бот» in any case
+form found three, all in Ru5. Raw line 853 «Бот и вся моя история» is OCR for «Вот» and was
+corrected the same way. Raw lines 736 and 748 «Боте» are the surname of Stephen Dowling Bots and are
+kept. Only Ru5's network changed (46,336 → 46,335 edges). The Ru5 rehearsal was re-run
+(`final/Ru5_r2`, 204 s alone): N_real equals igraph for all 13 triads.
 
