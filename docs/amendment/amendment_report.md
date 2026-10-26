@@ -1,7 +1,7 @@
 # Amendment Report: Rebuilt Pipeline for *Comparative Stylometric Analysis of Mark Twain's "The Adventures of Huckleberry Finn" Russian Translations*
 
 **Vix Talbot**
-10-2026 (last updated 2026-10-22)
+10-2026 (last updated 2026-10-26)
 
 Companion to *Final Report 3*¹ (11-2025). This is a living report: a section is added at the end of
 each pipeline stage, and the Executive Summary is updated with it.
@@ -10,9 +10,10 @@ each pipeline stage, and the Executive Summary is updated with it.
 
 ## 1. Executive Summary
 
-We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. Four stages are
+We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. Five stages are
 complete: the data audit with text preparation, an audit of the previous motif results,
-tokenization with part-of-speech tagging, and network construction.
+tokenization with part-of-speech tagging, network construction, and the classic stylometric
+measures.
 
 **Text preparation** changes how the article should describe its data. The 1911 Engel'gardt text (Ru-1911) contains OCR damage, mainly words split by stray
 spaces. We repaired it, which reduces its vocabulary by 382 word types (1.8%). In the other four
@@ -42,6 +43,18 @@ the lowest noun-to-verb ratio of the five (0.81), with Braude next (0.85), but p
 95% confidence intervals show the two cannot be told apart. The shift from 1911 to 1960 towards
 finite verbs and away from participles and verbal adverbs holds well outside the intervals. Figure 6
 is replaced, and §3.2.2, the Executive Summary and the Discussion need revised text.
+
+**Classic stylometric measures confirm the richness ranking but change two findings.**
+Engel'gardt's vocabulary is the richest of the five on every length-robust measure: MSTTR, MATTR,
+MTLD, HD-D, Yule's K and entropy, on whole texts and on 48,000-word samples alike. The abridged
+translations come next, and Braude and Daruzes are the least rich. Honoré's measure (correctly
+called R, not W) no longer ranks the abridged 1926 translation richest; that translation now comes
+last. But R barely separates the five translations and agrees with no other measure, so the article
+should stop using it to rank them. Average sentence length, counted in words without punctuation
+marks, is 11.3–14.5 words rather than 15–20. Braude, Engel'gardt and Daruzes cannot be told apart,
+so the claim that the later translations have the longest sentences is withdrawn. The abridged
+translations remain clearly shorter. Figures 1–5 are replaced, and §3.1 and §3.2.1–3.2.2 need
+revised text (Section 7).
 
 **Network construction** now keeps edges inside sentences. The old networks linked the last word of
 each sentence to the first word of the next. Removing those links removes 9–11% of the edges in
@@ -81,6 +94,12 @@ five translations (Section 10).
 | Network Construction | Exact motif counts in Python (igraph = networkx); mfinder 1.2 kept as cross-check with a recorded seed | None | — |
 | Network Construction | Roman numerals (XVI, III in regnal names) treated as numbers, not words; 1–7 edges per translation | None | — |
 | Audit of Previous Motif Results | mfinder's clock seeding on 64-bit machines never initialized its generator, so the 2025 runs cannot be repeated; new runs use a recorded seed | Wording | §3.4.1 |
+| Classic Stylometric Measures | Measures on Stanza lemmas with stop words kept (content-word view alongside); MATTR, MTLD, HD-D added; values change, order of the five essentially unchanged | Numbers | §3.1, §3.2.1–3.2.2; Figures 1, 3, 5 |
+| Classic Stylometric Measures | Equal-length (48,000-word) samples: Engel'gardt's richness lead and the Yule's K order hold | Wording | §3.1, §3.2.1 |
+| Classic Stylometric Measures | Honoré's "W" renamed R; Ru-1926 no longer highest (now lowest); R barely separates the texts and is dropped from the ranking | Finding | §3.1, Figure 2 |
+| Classic Stylometric Measures | Sentence length without punctuation (11.3–14.5 words); Braude, Engel'gardt, Daruzes not distinguishable; abridged texts shorter | Finding | §3.2.1, Figure 4 |
+| Classic Stylometric Measures | Bootstrap intervals for sentence length, K and HD-D; paragraph bootstrap found biased for MSTTR, MATTR, MTLD, R, entropy | Wording | §3.1, §3.2.1 |
+| Classic Stylometric Measures | Old fusion of hyphenated words moves no measure by more than 0.4% | None | — |
 | Motif Analysis (preliminary) | Ru-1911, 100 random networks: no sign changes vs Figure 9; motifs 74 and 108 become significant | To be decided | §3.4.1, Figures 9–10 |
 
 ---
@@ -271,9 +290,9 @@ Each fused form (e.g. «коечто», «когото») is a word that does no
 lemmatizer (pymorphy2) cannot find it in its dictionary, so inflected forms of the same hyphenated
 word are not reliably grouped under one lemma. The fusion therefore changes the old type counts of
 all five texts: 1,078 fused hyphenated words in Ru-1911, 397 in Ru-1926, 538 in Ru-1933, 855 in
-Ru-1949 and 1,143 in Ru-1960. Their effect on the lexical-richness numbers (Yule's K, Honoré's W, type–token ratio,
-unigram entropy) will be quantified in the Classic Stylometric Measures stage (Section 7), where the
-impact level will be confirmed.
+Ru-1949 and 1,143 in Ru-1960. Their effect on the lexical-richness numbers is quantified in Section 7.3: replacing
+every hyphenated word with its fused form moves no measure by more than 0.4% and changes no ranking,
+so the impact level below stands.
 
 **Impact level: Wording.** The article's description of "clean" data in "Distinct Full Datasets"
 should describe the new procedure (see 4.8).
@@ -588,8 +607,7 @@ Engel'gardt, where nouns do.*
 
 **Sentence and word counts.** Stanza finds 6–8% more sentences in the prepared text than the razdel
 splitter found in the raw text during the data audit (e.g. Ru-1911: 8,073 versus 7,593), and its word-token counts are within 0.1% of the audit
-definition on the prepared text. Which sentence segmentation is used for average sentence length is
-decided in Section 7.
+definition on the prepared text. Average sentence length (Section 7) uses Stanza's sentences.
 
 **Impact level: Finding** (and Figure: Figure 6 is replaced).
 
@@ -640,9 +658,280 @@ can stay.
 
 ## 7. Classic Stylometric Measures
 
-To be completed. Carried over from 4.7: quantify the effect of the old fusion of hyphenated words on
-the lexical-richness numbers, and confirm the impact level. Carried over from 6.3: decide the sentence
-segmentation (Stanza or razdel) for average sentence length.
+### 7.1 What changed
+
+**Old.** Yule's K, Honoré's "W" and the chunked type–token ratio (TTR) were computed on the
+lemmatized text with stop words removed (`Ru#_clean_lemmatized_nostops.txt`; scripts
+`14kw_index.py`, `03feature_extraction.py`). Unigram entropy used the lemmatized text with stop words
+kept. All lemmas came from pymorphy2 applied to the old cleaned text, in which ё had been deleted,
+hyphenated words fused and OCR splits left unrepaired (4.3, 4.7). §3.2.1 says the TTR used
+`Ru#_cleaned_lemmatized.txt`, but the code used the file without stop words. Average sentence length
+came from NLTK's sentence splitter and word tokenizer run on the raw text, and every NLTK token was
+counted, punctuation marks included. Each measure was reported once per whole text, with no
+uncertainty. The "W" in the old code is the formula usually called Honoré's R: 100 · ln N / (1 − V1/V).
+
+**New.** Tokens are Stanza lemmas of every word token, lowercased, with ё → е, the same units as the
+network nodes (Section 9). The primary view keeps stop words ("all words"). A second view keeps only
+content words (Stanza tags NOUN, VERB, ADJ, ADV, PROPN) and is the one closer to the old values.
+Measures (`src/huckfinn_cna/lexical.py`):
+
+- **MSTTR**: mean TTR over consecutive 2,000-word chunks, with the old code's rule for the final
+  chunk (dropped if shorter than 1,000 words).
+- **MATTR**: mean TTR over every window of 100, 500 or 1,000 consecutive words (Covington & McFall
+  2010)¹¹. The 500-word window is primary.
+- **MTLD**: bidirectional, threshold 0.72 (McCarthy & Jarvis 2010)⁹.
+- **HD-D**: sample size 42 (McCarthy & Jarvis 2007)¹⁰.
+- **Yule's K**: 10⁴ · (Σ i² V_i − N) / N², as in the old code.
+- **Honoré's R**: the old "W", renamed.
+- **Unigram entropy**: log₂.
+
+MTLD, HD-D and MATTR agree with the independent `lexicalrichness` package¹⁴ on all five texts in
+both views (50 of 50 values). The largest gap, 9 × 10⁻¹⁰ relative on HD-D, comes from that package's
+use of scipy; our HD-D equals exact rational arithmetic.
+
+**Length control.** Every measure is also computed on equal-length samples of 48,000 words, the
+length of the shortest translation (Ru-1926, 48,182 words) rounded down to a thousand. In the
+content-word view the samples are 25,000 words. A sample starts at the beginning of a paragraph and
+takes exactly that many consecutive words. Each text contributes its non-overlapping samples: two for
+Ru-1911 and one for each of the others, Ru-1926's being its whole text. Each text except Ru-1926 also
+contributes 200 samples at random paragraph starts (seed 20261026), which show how much the measure
+varies between passages of the same translation.
+
+**Sentence length.** Stanza's sentences (Section 6), counted in word tokens, with punctuation
+excluded and dialogue taken as the splitter gives it. We report the mean, median and interquartile
+range. Punctuation marks per 1,000 words is reported as a separate measure.
+
+**Uncertainty.** Paragraphs are resampled with replacement (1,000 resamples, seed 20261026), which
+gives percentile 95% intervals for sentence length, Yule's K and HD-D. The paragraph bootstrap does
+not work for the other five measures, and for them the spread of the random 48,000-word samples is
+the uncertainty instead. MSTTR, MATTR and MTLD depend on word order, and concatenating resampled
+paragraphs in random order breaks up the narrative's local repetition, so every resample looks
+richer than the real text. Honoré's R and entropy depend on words used once, and a duplicated
+paragraph turns them into repeats. For these five measures the bootstrap intervals miss the point
+estimate in every text (e.g. Ru-1911 MTLD 139.2, interval 165–175). For Yule's K and HD-D the
+bootstrap bias is at most 0.3 standard errors with all words (1.1 with content words only), and each
+point estimate lies inside its interval.
+Diagnostic table: `docs/classic/classic_report.md`.
+
+### 7.2 Why
+
+The article chose MSTTR because TTR falls as a text grows, but Yule's K, Honoré's R and unigram
+entropy were still compared on whole texts of 48,000 to 114,000 words. Equal-length samples remove
+that confound for every measure. MATTR, MTLD and HD-D are the standard length-robust measures
+(McCarthy & Jarvis 2010). If Engel'gardt's lead held on MSTTR alone, it could be an artifact of
+chunking. Stop words are kept in the primary view for the reason §3.2.2 gives for entropy: function
+words are part of a translator's vocabulary profile. Punctuation marks are not words, so counting
+them inflates sentence length in proportion to each translator's punctuation habits.
+
+### 7.3 Effect
+
+**(a) Engel'gardt's richness lead holds.** On every measure except Honoré's R, Ru-1911 is the richest
+translation, on the whole text and at equal length, in both views. Its lead is well outside the
+passage-to-passage spread. MATTR-500 at 48,000 words is 0.554–0.572 for Ru-1911 (95% range of the
+random samples), against 0.528 for Ru-1926, 0.533 for Ru-1933 and at most 0.512 for the later two.
+MTLD at 48,000 words is 136–150 for Ru-1911, against 101–108 for the next translation. The rest of
+the old order also holds. The two abridged translations come next, Ru-1933 slightly ahead of Ru-1926
+on most measures, and Braude and Daruzes are the least rich. The order of Braude and Daruzes depends
+on the measure. Braude is lower on Yule's K, MTLD, HD-D, entropy and MATTR-100/500. Daruzes is lower
+on MSTTR and MATTR-1000, and in the content-word view on every measure. On Yule's K (all words)
+the two are distinguishable (101.0, 98.5–103.8, against 86.4, 84.5–88.4). With content words only,
+they are not (20.7 against 20.8).
+
+**(b) The Honoré contradiction does not persist in its old form, but R still disagrees with Yule's
+K.** In the article, R ranked the abridged Ru-1926 richest (2060.3). Now Ru-1926 has the lowest R of
+the five, on whole texts and at equal length, in both views, so the explanation that R is skewed by
+the short abridged texts no longer applies. R still disagrees with every other measure. On whole
+texts it ranks Braude first and Engel'gardt fourth, and at equal length Braude first and Engel'gardt
+second. It also barely discriminates. All five values lie between 2,081 and 2,155 at 48,000 words, a
+narrower spread than the range between passages of one translation (Ru-1911: 2,035–2,159). R is also
+the only measure whose order changes between whole texts and 48,000-word samples in both views. With
+all words, every other measure keeps its order. With content words only, entropy also swaps Ru-1926
+and Ru-1949. We cannot say why the old R ranked Ru-1926 first. It is not
+reproduced on the new text in either view.
+
+**(c) Sentence length.** Without punctuation, mean sentence length falls by 3.7–5.5 words in every
+translation, and the ranking changes at the top:
+
+| Translation | Old (NLTK, raw text, punctuation counted) | New: words per sentence [95% CI] | New: words + punctuation | Median | Punctuation per 1,000 words [95% CI] |
+|---|---|---|---|---|---|
+| Ru-1911-Engelgardt | 18.6 | 14.28 [13.98, 14.63] | 17.43 | 12 | 221 [218, 225] |
+| Ru-1926-Anon | 17.0 | 12.63 [12.23, 13.06] | 15.75 | 10 | 248 [242, 254] |
+| Ru-1933-Chukovsky-(Ed.) | 15.0 | 11.28 [10.98, 11.59] | 14.23 | 9 | 262 [257, 267] |
+| Ru-1949-Braude | 20.0 | 14.54 [14.08, 15.00] | 18.22 | 10 | 254 [250, 258] |
+| Ru-1960-Daruzes | 19.2 | 13.92 [13.51, 14.29] | 17.47 | 10 | 256 [252, 260] |
+
+Most of the fall, about 3 words per sentence, is punctuation: counting punctuation on the same
+Stanza sentences gives 14.2–18.2. The rest, 0.8–1.8 words, comes from the new sentence splitter and
+the cleaning. The old order was Braude > Daruzes > Engel'gardt > Anon > Chukovsky. The new order is
+Braude > Engel'gardt > Daruzes > Anon > Chukovsky. The 95% intervals of the first three overlap, so
+they cannot be told apart, and Braude and Daruzes no longer stand out as having the longest
+sentences. The abridged translations remain clearly shorter, and distinct from each other. Engel'gardt
+punctuates least (221 marks per 1,000 words, against 248–262), so counting punctuation had understated
+his sentences relative to the others. His median sentence (12 words) is the longest of the five.
+
+**Old versus new.** The old values are the bar labels of Figures 1–5, rounded as printed there. No
+`stylometric_summary.csv` or `lexical_diversity_results.csv` survives in the old repository. The
+article text gives some of them as approximate ("approx. 0.498", "~19–20 words"). The figure labels
+fix them to the printed precision. Old K, R and MSTTR used lemmas without stop words, so the
+content-word view is the closer comparison. Old entropy kept stop words, so the all-words view is.
+
+| Measure | Translation | Old | New, all words: whole | New, all words: 48,000 words | New, content words: whole |
+|---|---|---|---|---|---|
+| Yule's K (lower = richer) | Ru-1911 | 13.3 | 61.6 | 62.2 | 11.1 |
+| | Ru-1926 | 20.3 | 77.2 | 77.1 | 16.7 |
+| | Ru-1933 | 18.0 | 72.0 | 72.6 | 15.2 |
+| | Ru-1949 | 24.9 | 101.0 | 94.7 | 20.7 |
+| | Ru-1960 | 23.2 | 86.4 | 83.3 | 20.8 |
+| Honoré's R (old "W") | Ru-1911 | 1955.2 | 2090 | 2121 | 2009 |
+| | Ru-1926 | 2060.3 | 2085 | 2081 | 2006 |
+| | Ru-1933 | 1962.9 | 2106 | 2106 | 2028 |
+| | Ru-1949 | 1963.8 | 2146 | 2155 | 2050 |
+| | Ru-1960 | 1943.3 | 2129 | 2112 | 2033 |
+| MSTTR (chunked TTR) | Ru-1911 | 0.552 | 0.397 | 0.399 | 0.547 |
+| | Ru-1926 | 0.520 | 0.367 | 0.367 | 0.502 |
+| | Ru-1933 | 0.519 | 0.373 | 0.372 | 0.506 |
+| | Ru-1949 | 0.498 | 0.346 | 0.358 | 0.488 |
+| | Ru-1960 | 0.485 | 0.339 | 0.353 | 0.472 |
+| Unigram entropy (bits) | Ru-1911 | 9.949 | 9.944 | 9.794 | 11.420 |
+| | Ru-1926 | 9.516 | 9.470 | 9.472 | 10.815 |
+| | Ru-1933 | 9.622 | 9.619 | 9.572 | 10.987 |
+| | Ru-1949 | 9.326 | 9.328 | 9.351 | 10.888 |
+| | Ru-1960 | 9.362 | 9.349 | 9.373 | 10.788 |
+
+Keeping stop words raises K about fivefold and lowers MSTTR by about 0.15, because function words are
+few and frequent. The content-word values are close to the old ones, and the order of the five is
+the same except for two small swaps: Ru-1926/Ru-1933 on MSTTR, and Ru-1949/Ru-1960 on K, whose
+intervals overlap. Entropy is nearly unchanged (within 0.05 bits).
+
+New measures (all words; whole text, then the mean of the 48,000-word non-overlapping samples):
+
+| Translation | MATTR-500 | MTLD | HD-D [95% CI] |
+|---|---|---|---|
+| Ru-1911-Engelgardt | 0.561 / 0.562 | 139.2 / 140.1 | 0.902 [0.900, 0.903] / 0.901 |
+| Ru-1926-Anon | 0.528 / 0.528 | 100.4 / 100.5 | 0.883 [0.880, 0.886] / 0.883 |
+| Ru-1933-Chukovsky-(Ed.) | 0.532 / 0.533 | 104.0 / 102.6 | 0.889 [0.887, 0.891] / 0.889 |
+| Ru-1949-Braude | 0.496 / 0.508 | 77.3 / 82.8 | 0.861 [0.858, 0.863] / 0.867 |
+| Ru-1960-Daruzes | 0.498 / 0.510 | 88.8 / 93.2 | 0.873 [0.870, 0.875] / 0.877 |
+
+**The old fusion of hyphenated words (carried over from 4.7).** We replaced each hyphenated word
+with its fused, unlemmatized form (кое-что → коечто), approximating the old cleaning, and recomputed
+everything. No measure moves by more than 0.006 bits of entropy, 0.001 of MSTTR or MATTR, 1.2 of
+MTLD (0.4%), 0.03 of K or 4.6 of R (0.2%), and no order changes. The fusion was a fault in the old text but
+has no material effect on these numbers, so 4.7's impact level (Wording) stands.
+
+**Figures 1–5 (replacements).** All words, greyscale. Plain bars: whole text. Hatched bars:
+48,000-word samples, with whiskers for the 95% range of the random samples. On Figure 1 the
+whole-text whisker is the 95% bootstrap interval. Figure 4 shows the bootstrap interval.
+
+![Figure 1 (replacement)](figures/fig1_yules_k_greyscale.png)
+
+*Figure 1 (replacement): Yule's K (lower = richer vocabulary). Engel'gardt is lowest and Braude
+highest, on the whole text and on 48,000-word samples.*
+
+![Figure 2 (replacement)](figures/fig2_honores_r_greyscale.png)
+
+*Figure 2 (replacement): Honoré's R (higher = richer vocabulary). All five translations lie within
+4% of each other, and the order agrees with no other measure.*
+
+![Figure 3 (replacement)](figures/fig3_msttr_greyscale.png)
+
+*Figure 3 (replacement): MSTTR over 2,000-word chunks (higher = more varied vocabulary).*
+
+![Figure 4 (replacement)](figures/fig4_sentence_length_greyscale.png)
+
+*Figure 4 (replacement): Average sentence length in words, punctuation not counted, with 95%
+bootstrap intervals. Braude, Engel'gardt and Daruzes overlap; the abridged translations have
+shorter sentences.*
+
+![Figure 5 (replacement)](figures/fig5_unigram_entropy_greyscale.png)
+
+*Figure 5 (replacement): Unigram entropy of lemmas, stop words kept (higher = more diverse).*
+
+**Impact levels.**
+
+| Change | Old → new | Reason | Impact level |
+|---|---|---|---|
+| Token basis | pymorphy2 lemmas of the old cleaned text, stop words removed (K, R, TTR) → Stanza lemmas of every word, stop words kept; content-word view alongside | Same units as the networks; function words belong to the vocabulary profile | Numbers |
+| Yule's K | 13.3–24.9 → 61.6–101.0 (all words); same order; Braude–Daruzes distinguishable with all words, not with content words | Stop words kept | Numbers (Figure 1 replaced) |
+| Honoré's "W" | Named W; Ru-1926 highest; "skewed by short abridged texts" → named R; Ru-1926 lowest; R hardly separates the texts and agrees with no other measure | Correct name; length control shows the abridged texts are not favoured | Finding (Figure 2 replaced) |
+| Chunked TTR | 0.485–0.552 → MSTTR 0.339–0.397 (all words), 0.472–0.547 (content) | Stop words kept | Numbers (Figure 3 replaced) |
+| New measures | — → MATTR, MTLD, HD-D | Length-robust confirmation of the richness ranking | Wording |
+| Length control | Whole texts only → also 48,000-word samples; Engel'gardt's lead and the K order hold | The abridged texts are 42–69% of the length of the full translations | Wording |
+| Unigram entropy | 9.326–9.949 → 9.328–9.944; same order | — | Numbers (Figure 5 replaced) |
+| Sentence length | NLTK on raw text, punctuation counted (15.0–20.0) → Stanza sentences, words only (11.3–14.5); Braude, Engel'gardt and Daruzes not distinguishable | Punctuation marks are not words | Finding (Figure 4 replaced) |
+| Uncertainty | None → bootstrap intervals (sentence length, K, HD-D); random-sample spread (other measures) | — | Wording |
+| Old hyphen fusion (from 4.7) | Effect unknown → ≤ 0.4% on every measure | — | None (4.7 stays Wording) |
+
+### 7.4 Suggested article text
+
+**§3.1.** Retitle "Yule's K | Honoré's R" and replace the section text with:
+
+> Yule's K and Honoré's R are older measures derived from the frequency profile of the vocabulary.
+> Yule's K weights how often words are repeated; lower values mean a richer vocabulary. Honoré's R,
+> 100 · ln N / (1 − V1/V), rewards words used exactly once (hapax legomena); higher values mean a
+> richer vocabulary. Both were computed on the lemmas of every word, stop words included, on each
+> whole text and, to control for length, on samples of 48,000 words, the length of the shortest
+> translation.
+>
+> Engel'gardt has the lowest K by a clear margin (61.6; 95% bootstrap interval 60.3–63.2). The
+> abridged translations follow (Chukovsky 72.0, Anon 77.2), then Daruzes (86.4), with Braude highest
+> (101.0). The order is the same on 48,000-word samples (Figure 1).
+>
+> Honoré's R barely separates the translations: all five lie between 2,081 and 2,155 on 48,000-word
+> samples, a narrower spread than the variation between passages of a single translation, and the
+> order it gives (Braude highest, Anon lowest) agrees with no other measure (Figure 2). We therefore
+> do not use R to rank the translations.
+
+**Figure 1 caption:** "Yule's K (lower = richer vocabulary), whole texts and 48,000-word samples."
+**Figure 2 caption:** "Honoré's R (higher = richer vocabulary). The five translations lie within 4%
+of each other." In the table of visualizations, rename "Honoré's W Bar Chart" to "Honoré's R Bar
+Chart".
+
+**§3.2.1, Type Token Ratio.** After the paragraph introducing MSTTR, replace the paragraphs from "This
+analysis was performed with the Ru#_cleaned_lemmatized.txt datasets" and from "Engel'gardt continues
+to be the most lexically complex translator …" with:
+
+> The TTR was computed on the lemmas of every word, stop words included. Besides MSTTR (2,000-word
+> chunks), we computed three standard length-robust measures: the moving-average TTR over 500-word
+> windows (MATTR; Covington & McFall 2010), MTLD and HD-D (McCarthy & Jarvis 2010), each on the
+> whole text and on 48,000-word samples.
+>
+> Engel'gardt has the most varied vocabulary on every one of these measures (MSTTR 0.397, MATTR
+> 0.561, MTLD 139), on whole texts and on 48,000-word samples alike, and his lead lies well outside
+> the variation between passages. The abridged 1926 and 1933 translations follow (MSTTR 0.367 and
+> 0.373), and Braude and Daruzes are the least varied (0.346 and 0.339); which of these two is lower
+> depends on the measure. Counting content words only gives the same picture (MSTTR 0.547, 0.502,
+> 0.506, 0.488, 0.472).
+
+**Figure 3 caption:** "MSTTR over 2,000-word chunks, whole texts and 48,000-word samples."
+
+**§3.2.1, Average Sentence Length.** Replace the section text with:
+
+> Sentences were identified by the Stanza sentence splitter and their length counted in words;
+> punctuation marks are not counted. Braude (14.5 words; 95% bootstrap interval 14.1–15.0),
+> Engel'gardt (14.3; 14.0–14.6) and Daruzes (13.9; 13.5–14.3) cannot be told apart. The abridged
+> translations have shorter sentences (Anon 12.6, Chukovsky 11.3), which supports the idea that they
+> were adapted for a younger audience. Engel'gardt's typical sentence is the longest of the five
+> (median 12 words, against 9–10), and he uses the least punctuation (221 marks per 1,000 words,
+> against 248–262).
+
+**Figure 4 caption:** Replace with "Average sentence length in words (punctuation not counted).
+Braude, Engel'gardt and Daruzes cannot be distinguished; the abridged translations have shorter
+sentences."
+
+**§3.2.2, Unigram Entropy.** Replace the paragraph beginning "The Unigram Entropy analysis shows …"
+with:
+
+> Engel'gardt has the highest unigram entropy (9.944 bits), followed by Chukovsky (9.619) and Anon
+> (9.470); Daruzes (9.349) and Braude (9.328) are lowest, indicating more predictable word choice.
+> Because entropy grows with text length, we repeated the calculation on 48,000-word samples:
+> Engel'gardt still leads (9.79) and Braude and Daruzes remain lowest (9.35 and 9.37).
+
+**Figure 5 caption:** "Unigram entropy (lemmas, stop words kept), whole texts and 48,000-word
+samples."
+
+Add McCarthy & Jarvis (2007, 2010)⁹ ¹⁰, Covington & McFall (2010)¹¹, Yule (1944)¹² and Honoré
+(1979)¹³ to the article's bibliography.
 
 ## 8. Delta, Clustering and Embedding
 
@@ -830,3 +1119,14 @@ To be completed.
 8. Nivre, J. et al. Universal Dependencies v2: An Evergrowing Multilingual Treebank Collection. In
    *Proceedings of the 12th Language Resources and Evaluation Conference (LREC 2020)*, 4034–4043
    (2020).
+9. McCarthy, P. M. & Jarvis, S. MTLD, vocd-D, and HD-D: A validation study of sophisticated
+   approaches to lexical diversity assessment. *Behavior Research Methods* 42, 381–392 (2010).
+10. McCarthy, P. M. & Jarvis, S. vocd: A theoretical and empirical evaluation. *Language Testing* 24,
+    459–488 (2007). Source of HD-D.
+11. Covington, M. A. & McFall, J. D. Cutting the Gordian knot: The moving-average type–token ratio
+    (MATTR). *Journal of Quantitative Linguistics* 17, 94–100 (2010).
+12. Yule, G. U. *The Statistical Study of Literary Vocabulary*. Cambridge University Press (1944).
+13. Honoré, A. Some simple measures of richness of vocabulary. *Association for Literary and
+    Linguistic Computing Bulletin* 7, 172–177 (1979).
+14. Shen, L. LexicalRichness: a small module to compute textual lexical richness.
+    https://github.com/LSYS/LexicalRichness. Used (cross-check only): version 0.5.1.

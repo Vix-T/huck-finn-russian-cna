@@ -19,6 +19,9 @@ network_checksums = "docs/networks/checksums.txt"
 motif_report = "docs/motifs/motif_report.md"
 mfinder_final_dir = "data/interim/mfinder/final"   # final runs: one subdirectory per text, TEXT_r{R}/
 old_zscores = "docs/audit/report3_fig9_zscores.csv"   # Figure 9 of Final Report 3 (the `input_OUT` run)
+classic_report = "docs/classic/classic_report.md"
+classic_results = "data/interim/lexical/results.json"   # every computed value, for later stages
+figures_dir = "docs/amendment/figures"
 
 [corpus]
 texts = ["Ru1", "Ru2", "Ru3", "Ru4", "Ru5"]
@@ -280,3 +283,59 @@ sentinel = 888888                # value mfinder writes when a statistic is unde
 z_threshold = 2.0                # |Z| > this is starred, as in Figure 9 of Final Report 3
 fdr_alpha = 0.05                 # Benjamini-Hochberg q-values below this are called significant
 mfinder_z_tolerance = 0.006      # mfinder prints Z to 2 decimals; recomputed Z must agree within this
+
+# --- Classic stylometric measures (lexical.py) ----------------------------------------
+
+[lexical]
+# Tokens: word tokens (is_word = 1); Stanza lemma lowercased, then mapped with networks.lemma_char_map
+# (ё -> е), the same rule as network nodes. View "all" keeps every word token (primary view);
+# view "content" keeps tokens whose Stanza UPOS is in tag.content_upos.
+views = ["all", "content"]
+primary_view = "all"
+msttr_chunk = 2000              # MSTTR chunk length (old code: 2,000)
+msttr_min_last_fraction = 0.5   # old code: the final partial chunk is dropped if shorter than this share of a chunk
+mattr_windows = [100, 500, 1000]
+mattr_primary = 500
+mtld_threshold = 0.72           # McCarthy & Jarvis 2010; a factor ends when the running TTR is <= threshold
+hdd_draws = 42                  # HD-D sample size (McCarthy & Jarvis 2007)
+yule_scale = 10000              # K = scale * (sum_i i^2 V_i - N) / N^2
+honore_scale = 100              # R = scale * ln N / (1 - V1 / V)
+entropy_base = 2
+crosscheck_rel_tol = 1e-6       # lexicalrichness must agree with lexical.py within this relative tolerance. Not tighter:
+                                # its HD-D uses scipy hypergeom.pmf, which is off by ~1e-9 relative (Ru1); lexical.py's HD-D
+                                # equals exact rational arithmetic to ~1e-14 (tests/test_lexical.py checks a toy case)
+
+# Equal-length samples: N = the shortest text's token count (per view) rounded down to a multiple of
+# sample_round. A sample starts at the first token of a paragraph and takes exactly N consecutive tokens
+# of the view. Non-overlapping samples run from the start of the text, each starting at the first
+# paragraph start at or after the end of the previous one. Random windows: random_windows starts drawn
+# uniformly, with replacement, from the paragraph starts that leave N tokens.
+sample_round = 1000
+random_windows = 200
+single_sample_texts = ["Ru2"]   # contribute only their one sample from the start of the text (no random windows)
+
+# Paragraph-level bootstrap for whole-text measures and sentence length: paragraphs resampled with
+# replacement and concatenated in the drawn order; percentile intervals. Generators:
+# numpy default_rng([master_seed, stream, text index]), text index 0-based in corpus.texts.
+bootstrap_resamples = 1000
+bootstrap_ci = 0.95
+# Lexical measures reported with a bootstrap interval (project owner's decision, 2026-10-26). For MSTTR, MATTR,
+# MTLD, Honoré's R and entropy the paragraph bootstrap is biased (shuffled paragraphs break local repetition;
+# duplicated paragraphs remove hapaxes), so their uncertainty is the spread of the equal-length random windows;
+# their bootstrap is still computed and shown as a diagnostic. Sentence-length measures always get intervals.
+bootstrap_measures = ["yule_k", "hdd"]
+master_seed = 20261026          # separate from the POS bootstrap (20261022) and mfinder (20261023) seeds
+bootstrap_stream = 0
+windows_stream = 1
+quantile_method = "linear"      # numpy quantile method for median, IQR and percentile intervals
+workers = 1                     # processes (one text each); 1 = sequential. Results do not depend on it (seeds are per text)
+
+# Old values (Final Report 3). No stylometric_summary.csv or lexical_diversity_results.csv exists in
+# the old repository (tag report-v3), so the values are the bar labels of Figures 1-5, at the
+# precision printed there (checked against the images embedded in the PDF).
+[lexical.old]
+yule_k = { Ru1 = 13.3, Ru2 = 20.3, Ru3 = 18.0, Ru4 = 24.9, Ru5 = 23.2 }
+honore = { Ru1 = 1955.2, Ru2 = 2060.3, Ru3 = 1962.9, Ru4 = 1963.8, Ru5 = 1943.3 }
+msttr = { Ru1 = 0.552, Ru2 = 0.520, Ru3 = 0.519, Ru4 = 0.498, Ru5 = 0.485 }
+sentence_length = { Ru1 = 18.6, Ru2 = 17.0, Ru3 = 15.0, Ru4 = 20.0, Ru5 = 19.2 }
+entropy = { Ru1 = 9.949, Ru2 = 9.516, Ru3 = 9.622, Ru4 = 9.326, Ru5 = 9.362 }

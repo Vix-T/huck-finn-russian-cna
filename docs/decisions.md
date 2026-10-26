@@ -186,3 +186,51 @@ Plan: `docs/plan/motif_runs.md`.
     The script refuses to start unless the networks match `docs/networks/checksums.txt`. mfinder now
     also gets `-oi` (results after every random network, flushed), which `scripts/mfinder_status.sh`
     counts for progress; a test shows `-oi` leaves `_MAT_R` and `_OUT` unchanged for a fixed seed.
+
+## Classic stylometric measures (2026-10-26)
+
+Plan: `docs/plan/classic_metrics.md`. Implemented in `src/huckfinn_cna/lexical.py`; parameters in config
+`[lexical]`; report `docs/classic/classic_report.md`; figures `docs/amendment/figures/fig1–fig5_*`.
+
+31. **Tokens and views.** Word tokens (`is_word = 1`), Stanza lemma lowercased and mapped with
+    `networks.lemma_char_map` (ё → е), the network-node rule. View **all** (stop words kept) is
+    primary; view **content** keeps Stanza UPOS in `tag.content_upos` and is the comparison with the
+    old stop-word-free values.
+32. **Measures.** MSTTR over 2,000-token chunks, final partial chunk dropped if shorter than 1,000
+    (the old code's rule); MATTR windows 100, 500 (primary), 1,000, averaged over every window; MTLD
+    bidirectional, threshold 0.72, a factor ending when the running TTR is ≤ 0.72, partial final
+    factor (1 − TTR)/(1 − 0.72); HD-D with 42 draws, Σ (1 − P(0))/42; Yule's K = 10⁴ (Σ i² V_i − N)/N²;
+    Honoré's R = 100 ln N/(1 − V1/V), the old "W" renamed; entropy log₂. MTLD, HD-D and MATTR are
+    cross-checked against `lexicalrichness` 0.5.1 (dev dependency) on all texts and both views,
+    relative tolerance 10⁻⁶ (its HD-D uses scipy and is off by ~10⁻⁹; ours equals exact rational
+    arithmetic).
+33. **Equal-length samples.** N = shortest text's token count in the view rounded down to 1,000
+    (all 48,000; content 25,000). A sample starts at a paragraph's first token and takes exactly N
+    consecutive tokens of the view. Non-overlapping samples run from the start, each beginning at the
+    first paragraph start at or after the previous sample's end. Rank order "at equal length" uses the
+    mean of the non-overlapping samples. 200 random windows per text (paragraph starts drawn
+    uniformly with replacement among those leaving N tokens) show the spread; Ru2 contributes only
+    its one sample (`single_sample_texts`). Ru3 is treated like the full texts (one non-overlapping
+    sample plus random windows).
+34. **Sentence length.** Stanza sentences from the tagged files. Words per sentence counts word
+    tokens; sentences with no word token (30–61 per text) are excluded. Mean, median and IQR (numpy
+    `linear` quantiles). Punctuation per 1,000 words counts `is_punct` tokens over all word tokens.
+    A bridge column (words + punctuation per sentence) separates the effect of punctuation from that
+    of segmentation and cleaning.
+35. **Uncertainty: split by measure** (project owner's decision, 2026-10-26). Paragraph bootstrap as
+    in decision 22 (resampled paragraphs concatenated in drawn order, 1,000 resamples, percentile 95%
+    intervals), master seed **20261026**, generator numpy `default_rng([20261026, stream, text index])`,
+    stream 0 = bootstrap, 1 = random windows; one draw per text shared by both views and sentence
+    length. Intervals are reported only for sentence length, Yule's K and HD-D (`bootstrap_measures`).
+    For MSTTR, MATTR, MTLD, Honoré's R and entropy the paragraph bootstrap is biased (shuffled
+    paragraphs break local repetition; duplicated paragraphs remove hapaxes) and its intervals miss the
+    point estimate in every text; their uncertainty is the spread of the equal-length random windows.
+    Their bootstrap is still computed and tabulated as a diagnostic.
+36. **Old values.** No `stylometric_summary.csv` or `lexical_diversity_results.csv` exists in the old
+    repository (tag report-v3); old values are the bar labels of Figures 1–5 of Final Report 3,
+    checked against the images embedded in the PDF, stored in config `[lexical.old]`.
+37. **Hyphen-fusion sensitivity** (carried over from 4.7). Each hyphenated word token replaced by its
+    lowercased surface form with the hyphen deleted, unlemmatized; whole texts recomputed.
+38. **Sequential run in the sandbox.** `ProcessPoolExecutor` cannot create semaphores inside the
+    Claude Code sandbox, so `lexical.workers = 1` runs texts sequentially (about 2 minutes); results
+    do not depend on the number of workers.

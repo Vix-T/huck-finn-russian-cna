@@ -25,3 +25,8 @@ packages = ["src/huckfinn_cna"]
 
 [tool.uv.sources]
 ru-core-news-lg = { url = "https://github.com/explosion/spacy-models/releases/download/ru_core_news_lg-3.8.0/ru_core_news_lg-3.8.0-py3-none-any.whl" }
+
+[dependency-groups]
+dev = [
+    "lexicalrichness>=0.5.1",
+]
