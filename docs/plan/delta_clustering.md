@@ -90,3 +90,8 @@ and 8 and the old Delta recompute exactly from the old DTMs and lemmatized texts
 added to answer item 3's "do blocks group by translation": story-position gap and shared n-grams
 (decision 49). They show that blocks group by story position (Engel'gardt excepted) and that
 Ru-1926 and Ru-1933 share 30% of their eight-word sequences.
+
+**Follow-up (2026-10-27): RBF spectral embedding.** Before dropping spectral embedding, a properly
+constructed version was tested (Gaussian affinity on Cosine Delta, σ = 0.5/1/2 × median, texts and
+blocks). It is connected and stable but repeats MDS (texts) and PCA (blocks); it stays in the appendix
+(decision 53, amendment Section 8).

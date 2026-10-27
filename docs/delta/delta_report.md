@@ -231,6 +231,50 @@ Across the grid (view all): eigenvalues λ2, λ3, λ4, zero affinities, and each
 | 1000 | 0 | 0.0000 | 0.0000 | 2.0000 | 0.0000 | 8 | 3 | Ru1→Ru4, Ru2→Ru3, Ru3→Ru2, Ru4→Ru5, Ru5→Ru4 |
 | 1000 | 100 | 0.0000 | 0.0000 | 2.0000 | 0.0000 | 8 | 3 | Ru1→Ru2, Ru2→Ru3, Ru3→Ru2, Ru4→Ru5, Ru5→Ru4 |
 
+## Spectral embedding on an RBF affinity (Cosine Delta)
+
+W = exp(−d² / (2σ²)) on Cosine Delta at the primary setting (all words, 300 MFW, culling 0 %), σ = factor × median off-diagonal distance; symmetric normalized Laplacian, first eigenvector dropped, next two rescaled by D^−1/2 (sklearn `spectral_embedding`, random_state 20261027). Procrustes disparity: scipy (0 = identical up to translation, scale, rotation, reflection; 1 = unrelated).
+
+### Text level (5 texts); median distance 1.2258
+
+| σ factor | σ | Components | λ1–λ5 | λ3 − λ2 | λ4 − λ3 | Same layout across random_state | Max Procrustes disparity across random_state |
+|---|---|---|---|---|---|---|---|
+| 0.5 | 0.6129 | 1 | -0.0000, 0.6283, 1.1108, 1.5760, 1.6848 | 0.4825 | 0.4652 | yes | 1.14e-31 |
+| 1 | 1.2258 | 1 | 0.0000, 1.0931, 1.2273, 1.3303, 1.3493 | 0.1343 | 0.1030 | yes | 2.04e-29 |
+| 2 | 2.4515 | 1 | 0.0000, 1.2115, 1.2459, 1.2695, 1.2732 | 0.0344 | 0.0236 | yes | 2.52e-28 |
+
+Procrustes disparity between σ factors: ×0.5 vs ×1: 0.0276; ×0.5 vs ×2: 0.0423; ×1 vs ×2: 0.0017.
+Procrustes disparity to the classical MDS map: ×0.5: 0.0626; ×1: 0.0279; ×2: 0.0281.
+
+| σ factor | Component | η² abridged vs full | Spearman ρ with publication year | Coordinates |
+|---|---|---|---|---|
+| 0.5 | 1 | 0.40 | +1.00 | Ru1 -0.386, Ru2 -0.345, Ru3 -0.309, Ru4 +0.648, Ru5 +0.758 |
+| 0.5 | 2 | 0.30 | -0.10 | Ru1 +1.594, Ru2 -0.188, Ru3 -0.263, Ru4 -0.009, Ru5 +0.059 |
+| 1 | 1 | 0.31 | +1.00 | Ru1 -0.303, Ru2 -0.216, Ru3 -0.171, Ru4 +0.331, Ru5 +0.375 |
+| 1 | 2 | 0.59 | -0.10 | Ru1 +0.555, Ru2 -0.218, Ru3 -0.275, Ru4 -0.005, Ru5 +0.102 |
+| 2 | 1 | 0.28 | +1.00 | Ru1 -0.264, Ru2 -0.177, Ru3 -0.135, Ru4 +0.274, Ru5 +0.303 |
+| 2 | 2 | 0.67 | -0.10 | Ru1 +0.407, Ru2 -0.210, Ru3 -0.259, Ru4 -0.008, Ru5 +0.103 |
+
+### Block level (79 blocks); median distance 1.0454
+
+| σ factor | σ | Components | λ1–λ6 | λ3 − λ2 | λ4 − λ3 | Same layout across random_state | Max Procrustes disparity across random_state |
+|---|---|---|---|---|---|---|---|
+| 0.5 | 0.5227 | 1 | 0.0000, 0.6413, 0.7357, 0.8377, 0.8562, 0.8685 | 0.0944 | 0.1020 | yes | 2.94e-29 |
+| 1 | 1.0454 | 1 | 0.0000, 0.9156, 0.9469, 0.9745, 0.9774, 0.9816 | 0.0313 | 0.0276 | yes | 5.11e-28 |
+| 2 | 2.0909 | 1 | -0.0000, 0.9886, 0.9967, 1.0036, 1.0042, 1.0053 | 0.0081 | 0.0069 | yes | 1.02e-26 |
+
+Procrustes disparity between σ factors: ×0.5 vs ×1: 0.0061; ×0.5 vs ×2: 0.0092; ×1 vs ×2: 0.0004.
+Procrustes disparity to the PCA plane (PC1 × PC2, same block features): ×0.5: 0.0228; ×1: 0.0164; ×2: 0.0169. Component 1 η² translation without Ru1's blocks: ×0.5: 0.56; ×1: 0.61; ×2: 0.61 (PCA PC1: 0.53). Same-translation nearest neighbour in the 2-D layout: ×0.5: 0.59; ×1: 0.62; ×2: 0.62.
+
+| σ factor | Component | η² translation | η² abridged vs full | r with story position | Mean by translation |
+|---|---|---|---|---|---|
+| 0.5 | 1 | 0.89 | 0.00 | -0.14 | Ru1 +0.042, Ru2 +0.000, Ru3 -0.001, Ru4 -0.022, Ru5 -0.030 |
+| 0.5 | 2 | 0.12 | 0.06 | -0.70 | Ru1 -0.015, Ru2 +0.016, Ru3 +0.010, Ru4 +0.002, Ru5 +0.001 |
+| 1 | 1 | 0.88 | 0.00 | -0.15 | Ru1 +0.022, Ru2 +0.002, Ru3 +0.001, Ru4 -0.012, Ru5 -0.017 |
+| 1 | 2 | 0.11 | 0.05 | -0.70 | Ru1 -0.008, Ru2 +0.007, Ru3 +0.005, Ru4 +0.002, Ru5 +0.001 |
+| 2 | 1 | 0.88 | 0.00 | -0.15 | Ru1 +0.018, Ru2 +0.002, Ru3 +0.001, Ru4 -0.010, Ru5 -0.014 |
+| 2 | 2 | 0.11 | 0.04 | -0.70 | Ru1 -0.007, Ru2 +0.006, Ru3 +0.004, Ru4 +0.002, Ru5 +0.001 |
+
 ## Old versus new
 
 Old values recomputed from the old local folder (read-only): Figure 7 from `document_term_matrix_with_stops.csv` (cosine similarity of raw counts over the full vocabulary); Figure 8 from `Ru#_clean_lemmatized.txt` (TF-IDF, random_state 42); old Classic Delta from the DTMs with z-scores over the 5 documents (ddof 0).

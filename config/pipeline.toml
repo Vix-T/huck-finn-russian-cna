@@ -422,6 +422,16 @@ spectral_check_states = [0, 1, 2, 42]   # layouts compared across these random_s
 # Diagnostic: shared word n-grams between each pair of texts (surface word tokens, lowercased, ё -> е); tests whether
 # two translations share wording (textual dependence) rather than only style.
 overlap_ngrams = [5, 8]
+# Spectral embedding on an RBF affinity (owner's request, 2026-10-27): W = exp(-d^2 / (2 sigma^2)) on the Cosine Delta
+# distances at the primary setting, sigma = factor x median off-diagonal distance (of that level), at text level
+# (5 texts) and block level (79 blocks). Always positive, so the graph is connected. Layouts compared across the sigma
+# factors by Procrustes disparity (scipy.spatial.procrustes: translation, scale, rotation and reflection removed) and
+# across spectral_check_states. Block-level axes are related to translation and abridged/full (eta^2) and to story
+# position (Pearson r); text-level axes to publication order (Spearman rho over the five texts).
+rbf_sigma_factors = [0.5, 1.0, 2.0]
+rbf_reference_factor = 1.0
+rbf_eigenvalues_shown = 6           # smallest normalized-Laplacian eigenvalues reported at block level
+publication_years = { Ru1 = 1911, Ru2 = 1926, Ru3 = 1933, Ru4 = 1949, Ru5 = 1960 }
 # Appendix Figure 13: content words, the top N by total count over the five texts, ranked within that set per text.
 fig13_top_n = 30
 # Old files (in paths.old_repo, read-only) used to recompute the old Figures 7-8 and the old Delta exactly.

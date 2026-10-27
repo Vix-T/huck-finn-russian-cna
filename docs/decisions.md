@@ -321,3 +321,15 @@ Plan: `docs/plan/delta_clustering.md`. Implemented in `src/huckfinn_cna/delta.py
 52. **Figure 13.** Top 30 content lemmas (Stanza UPOS in `tag.content_upos`) by total count over the
     five texts, ranked within that set per text (competition ranks), as the old script ranked within its
     30 words.
+53. **Spectral embedding on an RBF affinity** (project owner's request, 2026-10-27; config `[delta]`
+    `rbf_*`). W = exp(−d²/(2σ²)) on Cosine Delta at the primary setting, σ = 0.5, 1, 2 × the median
+    off-diagonal distance of the level, at text level (5) and block level (79); sklearn
+    `spectral_embedding(norm_laplacian=True, drop_first=True)`. Reported: normalized-Laplacian
+    eigenvalues and the λ3 − λ2 and λ4 − λ3 gaps; Procrustes disparity (scipy) between σ values, across
+    random_state, and against the MDS map (texts) and the PCA plane PC1 × PC2 (blocks); axes related to
+    publication order (texts, Spearman ρ), translation and abridged/full (η²) and story position (r).
+    **Outcome:** connected and stable (disparity ≤ 0.042 across σ, < 10⁻²⁵ across seeds); component 1
+    orders the texts by date and is a translation axis for blocks, component 2 is story position for
+    blocks; nearly identical to MDS (0.028) and PCA (0.016). Recommendation, adopted in Section 8: the
+    RBF version stays in the appendix as a robustness check; the clipped-cosine version and the old
+    TF-IDF Figure 8 are dropped; MDS is the main-text map.

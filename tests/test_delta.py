@@ -129,6 +129,29 @@ class EmbeddingTests(unittest.TestCase):
         self.assertEqual(dl.ngram_set(["a", "b", "c"], 2), {("a", "b"), ("b", "c")})
 
 
+class RbfTests(unittest.TestCase):
+    def test_median_offdiag(self):
+        d = np.array([[0, 1, 4], [1, 0, 2], [4, 2, 0]], dtype=float)
+        self.assertEqual(dl.median_offdiag(d), 2.0)
+
+    def test_rbf_affinity_positive_and_connected(self):
+        d = np.array([[0, 1, 9], [1, 0, 9], [9, 9, 0]], dtype=float)
+        w = dl.rbf_affinity(d, 1.0)
+        self.assertAlmostEqual(w[0, 1], np.exp(-0.5))
+        self.assertTrue((w > 0).all())
+        self.assertEqual(dl.components(w), 1)
+
+    def test_procrustes_ignores_rotation_scale_reflection(self):
+        a = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 2.0], [1.0, 3.0]])
+        rot = np.array([[0.0, -1.0], [1.0, 0.0]])
+        b = 3 * a @ rot * np.array([1, -1]) + 5
+        self.assertAlmostEqual(dl.procrustes_disparity(a, b), 0.0)
+
+    def test_rank_correlation(self):
+        self.assertAlmostEqual(dl.rank_correlation(np.array([1.0, 2, 3]), np.array([10.0, 30, 50])), 1.0)
+        self.assertAlmostEqual(dl.rank_correlation(np.array([1.0, 2, 3]), np.array([3.0, 2, 1])), -1.0)
+
+
 class ConfigTests(unittest.TestCase):
     def test_delta_config(self):
         cfg = load_config()["delta"]

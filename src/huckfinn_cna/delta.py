@@ -319,6 +319,62 @@ def same_layout(a: np.ndarray, b: np.ndarray, tol: float = 1e-6) -> bool:
     return all(np.allclose(a[:, k], b[:, k], atol=tol) or np.allclose(a[:, k], -b[:, k], atol=tol) for k in range(a.shape[1]))
 
 
+def median_offdiag(d: np.ndarray) -> float:
+    return float(np.median(d[np.triu_indices(len(d), 1)]))
+
+
+def rbf_affinity(d: np.ndarray, sigma: float) -> np.ndarray:
+    """Gaussian kernel exp(-d^2 / (2 sigma^2)); every entry > 0, so the graph is connected."""
+    return np.exp(-(d ** 2) / (2 * sigma ** 2))
+
+
+def procrustes_disparity(a: np.ndarray, b: np.ndarray) -> float:
+    """scipy Procrustes disparity (sum of squared differences after translation, scaling, rotation and reflection)."""
+    from scipy.spatial import procrustes
+    return float(procrustes(a, b)[2])
+
+
+def rank_correlation(x: np.ndarray, y: np.ndarray) -> float:
+    """Spearman rho (no tie correction; used for the five publication years)."""
+    rx, ry = np.argsort(np.argsort(x)), np.argsort(np.argsort(y))
+    return float(np.corrcoef(rx, ry)[0, 1])
+
+
+def rbf_spectral_level(d: np.ndarray, labels: list[str], cfg: dict, positions: np.ndarray | None,
+                       years: dict[str, int] | None) -> dict:
+    """RBF spectral embedding of one level at every sigma factor: eigenvalues, gaps, stability, axis profile."""
+    med = median_offdiag(d)
+    groups_ab = ["abridged" if t in cfg["abridged"] else "full" for t in labels]
+    out = {"median": med, "factors": {}}
+    for f in cfg["rbf_sigma_factors"]:
+        w = rbf_affinity(d, f * med)
+        emb = spectral(w, cfg["spectral_random_state"])
+        ev = normalized_laplacian_eigenvalues(w)
+        others = [spectral(w, rs) for rs in cfg["spectral_check_states"]]
+        axes = []
+        for k in range(emb.shape[1]):
+            x = emb[:, k]
+            ax = {"eta2_abridged": eta_squared(x, groups_ab),
+                  "text_means": {t: float(x[np.array(labels) == t].mean()) for t in dict.fromkeys(labels)}}
+            if positions is not None:
+                ax["eta2_translation"] = eta_squared(x, labels)
+                ax["r_position"] = float(np.corrcoef(x, positions)[0, 1])
+                ax["eta2_position_within"] = float(np.corrcoef(x, positions)[0, 1] ** 2)
+            if years is not None:
+                ax["rho_year"] = rank_correlation(x, np.array([years[t] for t in labels], dtype=float))
+            axes.append(ax)
+        out["factors"][f] = {
+            "sigma": f * med, "embedding": emb, "eigenvalues": ev,
+            "same_across_states": all(same_layout(emb, o) for o in others),
+            "max_state_disparity": max(procrustes_disparity(emb, o) for o in others),
+            "components": components(w), "axes": axes,
+        }
+    fs = cfg["rbf_sigma_factors"]
+    out["sigma_disparity"] = {(a, b): procrustes_disparity(out["factors"][a]["embedding"], out["factors"][b]["embedding"])
+                              for a, b in combinations(fs, 2)}
+    return out
+
+
 # --- Grid ----------------------------------------------------------------------------------
 
 
@@ -510,6 +566,24 @@ def analyse(config: dict) -> dict:
                                  "zero_affinities": int(((a == 0) & ~np.eye(len(texts), dtype=bool)).sum() // 2),
                                  "components": components(a)}
     res["spectral"]["grid"] = grid_eigs
+    block_labels = units[pv]["block_text"]
+    res["spectral_rbf"] = {
+        "texts": rbf_spectral_level(d_text, texts, cfg, None, cfg["publication_years"]),
+        "blocks": rbf_spectral_level(d_blocks, block_labels, cfg, relative_positions(block_labels), None),
+    }
+    # How much the RBF layouts add: Procrustes disparity to the MDS map (texts) and to the PCA plane PC1 x PC2 of the
+    # same block features (blocks); block component 1's translation eta^2 without Engel'gardt's blocks.
+    _, pc_scores = pca(feats["blocks"], 2)
+    lab = np.array(block_labels)
+    first = texts[0]
+    for f, x in res["spectral_rbf"]["texts"]["factors"].items():
+        x["vs_mds"] = procrustes_disparity(x["embedding"], res["mds"]["coords"])
+    for f, x in res["spectral_rbf"]["blocks"]["factors"].items():
+        e = x["embedding"]
+        x["vs_pca"] = procrustes_disparity(e, pc_scores)
+        x["eta2_translation_without_first"] = eta_squared(e[lab != first, 0], list(lab[lab != first]))
+        x["layout_coherence"] = coherence(np.linalg.norm(e[:, None] - e[None], axis=2), block_labels)
+    res["spectral_rbf"]["pca_eta2_without_first"] = eta_squared(pc_scores[lab != first, 0], list(lab[lab != first]))
 
     # Appendix Figure 13: top content words, ranked within the set per text.
     content_totals = Counter()
@@ -545,6 +619,54 @@ def tree_string(cl: set[frozenset[int]], texts: list[str]) -> str:
         parts = children + [texts[i] for i in sorted(rest)]
         return "(" + ", ".join(parts) + ")"
     return build(frozenset(range(len(texts))))
+
+
+def render_rbf(config: dict, res: dict) -> list[str]:
+    cfg, texts = config["delta"], res["texts"]
+    pr = cfg["primary"]
+    L = ["", "## Spectral embedding on an RBF affinity (Cosine Delta)", "",
+         f"W = exp(−d² / (2σ²)) on Cosine Delta at the primary setting ({cfg['primary_view']} words, {pr['mfw']} MFW, culling "
+         f"{pr['culling']} %), σ = factor × median off-diagonal distance; symmetric normalized Laplacian, first eigenvector dropped, "
+         f"next two rescaled by D^−1/2 (sklearn `spectral_embedding`, random_state {cfg['spectral_random_state']}). Procrustes "
+         "disparity: scipy (0 = identical up to translation, scale, rotation, reflection; 1 = unrelated)."]
+    for level, title in (("texts", "Text level (5 texts)"), ("blocks", "Block level (79 blocks)")):
+        r = res["spectral_rbf"][level]
+        L += ["", f"### {title}; median distance {r['median']:.4f}", "",
+              "| σ factor | σ | Components | λ1–λ" + str(min(cfg['rbf_eigenvalues_shown'], len(r['factors'][1.0]['eigenvalues']))) +
+              " | λ3 − λ2 | λ4 − λ3 | Same layout across random_state | Max Procrustes disparity across random_state |",
+              "|---|---|---|---|---|---|---|---|"]
+        for f, x in r["factors"].items():
+            ev = x["eigenvalues"][:cfg["rbf_eigenvalues_shown"]]
+            L.append(f"| {f:g} | {x['sigma']:.4f} | {x['components']} | " + ", ".join(f"{e:.4f}" for e in ev) +
+                     f" | {ev[2] - ev[1]:.4f} | {ev[3] - ev[2]:.4f} | {'yes' if x['same_across_states'] else 'no'} | "
+                     f"{x['max_state_disparity']:.2e} |")
+        L += ["", "Procrustes disparity between σ factors: " +
+              "; ".join(f"×{a:g} vs ×{b:g}: {v:.4f}" for (a, b), v in r["sigma_disparity"].items()) + "."]
+        if level == "texts":
+            L.append("Procrustes disparity to the classical MDS map: " +
+                     "; ".join(f"×{f:g}: {x['vs_mds']:.4f}" for f, x in r["factors"].items()) + ".")
+        else:
+            L.append("Procrustes disparity to the PCA plane (PC1 × PC2, same block features): " +
+                     "; ".join(f"×{f:g}: {x['vs_pca']:.4f}" for f, x in r["factors"].items()) +
+                     f". Component 1 η² translation without {texts[0]}'s blocks: " +
+                     "; ".join(f"×{f:g}: {x['eta2_translation_without_first']:.2f}" for f, x in r["factors"].items()) +
+                     f" (PCA PC1: {res['spectral_rbf']['pca_eta2_without_first']:.2f}). Same-translation nearest neighbour in the 2-D "
+                     "layout: " + "; ".join(f"×{f:g}: {x['layout_coherence']:.2f}" for f, x in r["factors"].items()) + ".")
+        L.append("")
+        if level == "texts":
+            L += ["| σ factor | Component | η² abridged vs full | Spearman ρ with publication year | Coordinates |", "|---|---|---|---|---|"]
+            for f, x in r["factors"].items():
+                for k, ax in enumerate(x["axes"], start=1):
+                    L.append(f"| {f:g} | {k} | {ax['eta2_abridged']:.2f} | {ax['rho_year']:+.2f} | "
+                             + ", ".join(f"{t} {v:+.3f}" for t, v in ax["text_means"].items()) + " |")
+        else:
+            L += ["| σ factor | Component | η² translation | η² abridged vs full | r with story position | Mean by translation |",
+                  "|---|---|---|---|---|---|"]
+            for f, x in r["factors"].items():
+                for k, ax in enumerate(x["axes"], start=1):
+                    L.append(f"| {f:g} | {k} | {ax['eta2_translation']:.2f} | {ax['eta2_abridged']:.2f} | {ax['r_position']:+.2f} | "
+                             + ", ".join(f"{t} {v:+.3f}" for t, v in ax["text_means"].items()) + " |")
+    return L
 
 
 def fmt_matrix(d: np.ndarray, texts: list[str], digits: int = 4) -> list[str]:
@@ -692,6 +814,8 @@ def render_report(config: dict, res: dict) -> str:
         e = g["eigenvalues"]
         L.append(f"| {n} | {c} | {e[1]:.4f} | {e[2]:.4f} | {e[3]:.4f} | {e[2] - e[1]:.4f} | {g['zero_affinities']} | {g['components']} | "
                  + ", ".join(f"{texts[i]}→{texts[j]}" for i, j in enumerate(g["nearest"])) + " |")
+
+    L += render_rbf(config, res)
 
     # Old vs new.
     o = res["old"]
@@ -888,6 +1012,57 @@ def consensus_network_figure(config: dict, edges: Counter, n_settings: int, text
     plt.close(fig)
 
 
+def rbf_figures(config: dict, res: dict, out: Path) -> None:
+    """Greyscale RBF spectral layouts, one panel per sigma factor: texts (labelled points) and blocks (marker = translation,
+    fill = story position on a grey ramp)."""
+    plt = _plt()
+    cfg, texts = config["delta"], res["texts"]
+    labels = _labels(config, texts)
+    factors = cfg["rbf_sigma_factors"]
+    r = res["spectral_rbf"]["texts"]
+    fig, axes = plt.subplots(1, len(factors), figsize=(6 * len(factors), 5.5))
+    for ax, f in zip(axes, factors):
+        x = r["factors"][f]
+        e = x["embedding"]
+        ax.scatter(e[:, 0], e[:, 1], s=120, color="black", alpha=0.75, edgecolor="grey")
+        for (px, py), lab in zip(e, labels):
+            ax.annotate(lab, (px, py), textcoords="offset points", xytext=(6, 6), fontsize=9)
+        ax.set_title(f"σ = {f:g} × median ({x['sigma']:.3f})\nλ2 = {x['eigenvalues'][1]:.3f}, λ3 = {x['eigenvalues'][2]:.3f}", fontsize=11)
+        ax.set_xlabel("Component 1")
+        ax.set_ylabel("Component 2")
+        ax.margins(0.3)
+    fig.suptitle("Spectral embedding of the translations (RBF affinity on Cosine Delta, 300 MFW)", fontsize=14)
+    fig.tight_layout()
+    fig.savefig(out / "spectral_rbf_texts_greyscale.png", dpi=config["pos_check"]["figure_dpi"], bbox_inches="tight")
+    plt.close(fig)
+
+    r = res["spectral_rbf"]["blocks"]
+    lab = res["units"][cfg["primary_view"]]["block_text"]
+    pos = relative_positions(lab)
+    markers = ["o", "s", "^", "D", "v", "P", "X"]
+    fig, axes = plt.subplots(1, len(factors), figsize=(6.5 * len(factors), 6))
+    for ax, f in zip(axes, factors):
+        x = r["factors"][f]
+        e = x["embedding"]
+        for t, m, name in zip(texts, markers, labels):
+            idx = np.array(lab) == t
+            sc = ax.scatter(e[idx, 0], e[idx, 1], c=pos[idx], cmap="Greys", vmin=-0.15, vmax=1.0, marker=m, s=70,
+                            edgecolors="black", linewidths=0.8, label=name)
+        ax.set_title(f"σ = {f:g} × median ({x['sigma']:.3f})\nλ2 = {x['eigenvalues'][1]:.3f}, λ3 = {x['eigenvalues'][2]:.3f}", fontsize=11)
+        ax.set_xlabel("Component 1")
+        ax.set_ylabel("Component 2")
+    handles = [plt.Line2D([], [], marker=m, linestyle="", markerfacecolor="white", markeredgecolor="black", markersize=8)
+               for m in markers[:len(texts)]]
+    fig.legend(handles, labels, loc="lower center", ncol=len(texts), frameon=False, fontsize=10, bbox_to_anchor=(0.5, -0.02))
+    fig.suptitle("Spectral embedding of 5,000-word blocks (RBF affinity on Cosine Delta, 300 MFW)", fontsize=14)
+    fig.subplots_adjust(bottom=0.16, top=0.85, wspace=0.25, right=0.88)
+    cbar = fig.colorbar(sc, cax=fig.add_axes([0.905, 0.2, 0.01, 0.6]))
+    cbar.set_ticks([0, 0.25, 0.5, 0.75, 1])
+    cbar.set_label("Story position (block centre as share of text; light = start, dark = end)")
+    fig.savefig(out / "spectral_rbf_blocks_greyscale.png", dpi=config["pos_check"]["figure_dpi"], bbox_inches="tight")
+    plt.close(fig)
+
+
 def fig13(config: dict, f13: dict, texts: list[str], path: Path) -> None:
     """Old Figure 13 style: ranks of the top content words per text."""
     plt = _plt()
@@ -937,6 +1112,7 @@ def figures(config: dict, res: dict) -> None:
     scatter(config, sp["embedding"], texts, "Spectral Embedding of Russian Translations (appendix)" + note,
             "Component 1", "Component 2", out / "appendix_spectral_embedding_greyscale.png")
     fig13(config, res["fig13"], texts, out / "fig13_mfw_content_rank_heatmap_greyscale.png")
+    rbf_figures(config, res, out)
 
 
 # --- Run --------------------------------------------------------------------------------------
