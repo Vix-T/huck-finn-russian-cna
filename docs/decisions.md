@@ -234,3 +234,40 @@ Plan: `docs/plan/classic_metrics.md`. Implemented in `src/huckfinn_cna/lexical.p
 38. **Sequential run in the sandbox.** `ProcessPoolExecutor` cannot create semaphores inside the
     Claude Code sandbox, so `lexical.workers = 1` runs texts sequentially (about 2 minutes); results
     do not depend on the number of workers.
+
+## Betweenness centrality (2026-10-27)
+
+Plan: `docs/plan/betweenness.md`. Implemented in `src/huckfinn_cna/centrality.py`; parameters in config
+`[centrality]`; report `docs/centrality/centrality_report.md`; figures `docs/amendment/figures/fig12*_*`.
+
+39. **Inputs.** The frozen networks-v1 files; the run fails unless every `Ru#_mfinder.txt` matches
+    `docs/networks/checksums.txt`, `Ru#_edges.tsv` has the same edge set, and the tagged files still
+    rebuild exactly the same edge counts (needed for the shuffles).
+40. **Variants.** Exact betweenness (igraph, no sampling), normalized as networkx does (÷ (n−1)(n−2),
+    ×2 undirected; n = all nodes, isolated included). Primary: unweighted, undirected (an edge in either
+    direction links the pair). Secondary: unweighted, directed. Sensitivity: the old method, directed,
+    distance = 1 / bigram count. igraph vs networkx on Ru2 (undirected): max |difference| 4 × 10⁻¹⁷
+    (tolerance 10⁻⁹).
+41. **Frequency adjustment** (Amancio 2015). 30 shuffles per text: all word tokens permuted across the
+    text and refilled into sentences of the original lengths; network rebuilt with `networks.count_edges`
+    (sentence-bounded, self-loops dropped); undirected unweighted betweenness. Adjusted = real / mean
+    shuffled; z = (real − mean) / SD, ddof 1; undefined when the denominator is 0 (no case occurred).
+    Seeds: master **20261027**, numpy `default_rng([20261027, text index])`, one generator per text,
+    permutations drawn in order.
+42. **Adjusted ranks only among frequent lemmas** (project owner's decision, 2026-10-27). Ranked by
+    adjusted score (or z), words seen once fill the top (tiny, noisy shuffled means). Adjusted ranks, top
+    lists, stability and the adjusted heatmap use only words at least as frequent as the text's 200th most
+    frequent lemma (ties included: 200–205 words, minimum frequency 31–75). Scores for all words are in
+    `data/interim/centrality/Ru#_betweenness.tsv`.
+43. **Ranks and stability.** Ranks: 1 = highest, ties share the best rank. Stability between two variants:
+    Spearman ρ (average ranks) of the full ranks over the union of the two variants' top-100 words.
+    Correlation with frequency: Pearson r(betweenness, log10 frequency) and Spearman ρ(betweenness,
+    frequency), all nodes.
+44. **Old values.** Old ranks are the row numbers of the old `Ru#_betweenness_rankings.csv` (old repo,
+    `mfinder-analysis/`, read-only), as the old heatmap script used. The old method re-run with igraph on
+    the old `Ru#_mfinder_input.txt` (nodes in an edge only, as the old script) reproduces the old top-100
+    ranks in every text (max score difference 5 × 10⁻⁵, floating-point ties among 1/count path lengths).
+    Old labels are mapped ё → е for comparison («всё» → «все»).
+45. **Figure 12 layout.** As the old script: union of each text's top 20, sorted by mean rank (absent
+    word counted as rank 1000), first 30 words; greyscale, rank 1 black; colour scale capped at 100,
+    cells show the actual rank.

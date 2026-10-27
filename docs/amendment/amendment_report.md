@@ -1,7 +1,7 @@
 # Amendment Report: Rebuilt Pipeline for *Comparative Stylometric Analysis of Mark Twain's "The Adventures of Huckleberry Finn" Russian Translations*
 
 **Vix Talbot**
-10-2026 (last updated 2026-10-26)
+10-2026 (last updated 2026-10-27)
 
 Companion to *Final Report 3*¹ (11-2025). This is a living report: a section is added at the end of
 each pipeline stage, and the Executive Summary is updated with it.
@@ -10,10 +10,10 @@ each pipeline stage, and the Executive Summary is updated with it.
 
 ## 1. Executive Summary
 
-We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. Five stages are
+We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. Six stages are
 complete: the data audit with text preparation, an audit of the previous motif results,
-tokenization with part-of-speech tagging, network construction, and the classic stylometric
-measures.
+tokenization with part-of-speech tagging, network construction, the classic stylometric measures,
+and betweenness centrality.
 
 **Text preparation** changes how the article should describe its data. The 1911 Engel'gardt text (Ru-1911) contains OCR damage, mainly words split by stray
 spaces. We repaired it, which reduces its vocabulary by 382 word types (1.8%). In the other four
@@ -64,6 +64,17 @@ libraries that agree on every value, with mfinder 1.2 kept as a cross-check, usi
 seed. The motif and centrality values are recomputed in the next stages. For this stage only the
 article's description of the network changes (Data Pipeline, §3.4).
 
+**Betweenness centrality withdraws the сказать/говорить finding.** The article reports that
+сказать and говорить become major bridge words in the 1949 Braude and 1960 Daruzes translations
+(сказать ranks 15 and 13, against 69 and 61 in the early translations). That rank comes from the old
+distance setting (1 / bigram count), which turns frequency into centrality. With the standard
+unweighted measure, сказать ranks 50–75 in all five translations. After adjusting for frequency,
+both verbs are less central than their frequency predicts in every translation, most of all in
+Braude and Daruzes. What does differ is frequency: the later translations use сказать more than
+twice as often. The old network was also lemmatized, not "unlemmatized" as §3.4.2 says. и, я and в
+remain in the top 5 everywhere. Figure 12 is replaced, and §3.4.2 and the Executive Summary need
+revised text (Section 11).
+
 **Motif analysis (preliminary, Ru-1911 only, 100 random networks).** On the new network no motif
 changes sign relative to Figure 9. Two motifs that were not significant in Figure 9 (74 and 108) now
 are, and the significance profile keeps its shape. The final run uses 1,000 random networks for all
@@ -100,6 +111,11 @@ five translations (Section 10).
 | Classic Stylometric Measures | Sentence length without punctuation (11.3–14.5 words); Braude, Engel'gardt, Daruzes not distinguishable; abridged texts shorter | Finding | §3.2.1, Figure 4 |
 | Classic Stylometric Measures | Bootstrap intervals for sentence length, K and HD-D; paragraph bootstrap found biased for MSTTR, MATTR, MTLD, R, entropy | Wording | §3.1, §3.2.1 |
 | Classic Stylometric Measures | Old fusion of hyphenated words moves no measure by more than 0.4% | None | — |
+| Betweenness Centrality | Old network described as "unlemmatized"; it was lemmatized, directed, across sentences, distance 1/count | Wording | §3.4.2 |
+| Betweenness Centrality | Exact unweighted undirected betweenness (directed and the old 1/count as checks); igraph = networkx | Numbers | §3.4.2, Figure 12 |
+| Betweenness Centrality | Frequency adjustment (30 shuffles per text) added; betweenness tracks frequency (ρ = 0.75–0.78) | Wording | §3.4.2 |
+| Betweenness Centrality | сказать/говорить "skyrocket" in Braude and Daruzes is a frequency effect of the 1/count weighting; not more central after adjustment | Finding | §3.4.2, Figure 12; Executive Summary |
+| Betweenness Centrality | и, я, в in the top 5 of every translation | None | — |
 | Motif Analysis (preliminary) | Ru-1911, 100 random networks: no sign changes vs Figure 9; motifs 74 and 108 become significant | To be decided | §3.4.1, Figures 9–10 |
 
 ---
@@ -1091,7 +1107,172 @@ positive and the same six negative. Motif 46 (120U) is still the most over-repre
 
 ## 11. Betweenness Centrality
 
-To be completed.
+### 11.1 What changed
+
+**Old.** §3.4.2 says betweenness was computed "for the full, unlemmatized network". In fact the old
+network was **lemmatized**: it is the mfinder input network (`Ru#_mfinder_input.txt`), built from
+pymorphy2 lemmas with stop words kept. It linked words across sentence boundaries (Section 9) and was
+**directed**. Its edge weights were bigram counts, and betweenness used **distance = 1 / count**
+(networkx, `25centrality_rankings.py`), so a path through frequent word pairs counted as short.
+Figure 12 ranks each translation's words by that score and shows the union of each text's top 20,
+sorted by mean rank and cut to 30 words. Re-running the old method with igraph on the archived old
+networks reproduces the old rankings: the top-100 ranks are identical in all five translations
+(largest score difference 5 × 10⁻⁵, from floating-point ties among 1/count path lengths).
+
+**New** (`src/huckfinn_cna/centrality.py`, on the frozen networks of Section 9, checksums verified):
+
+- **Primary:** exact unweighted betweenness on the undirected network (an edge in either direction
+  links the pair), normalized, no sampling.
+- **Secondary:** the same on the directed network.
+- **Sensitivity:** the old method, directed with distance 1 / bigram count.
+- **Cross-check:** igraph agrees with networkx on the smallest network (Ru-1926) to 4 × 10⁻¹⁷.
+- **Frequency adjustment** (Amancio 2015)¹⁵: for each translation we built 30 shuffled texts, with
+  word tokens permuted across the whole text and every sentence keeping its length (seed 20261027).
+  Each was rebuilt into a network by the same rules. A word's adjusted score is its real betweenness
+  divided by its mean betweenness over the shuffles: above 1 means more of a bridge than its
+  frequency alone predicts, below 1 less. We also report a z-score. Words seen only a few times
+  get very small, noisy shuffled means, and they fill the top of an adjusted ranking. Adjusted
+  *ranks* are therefore computed only among each translation's 200 most frequent lemmas (the
+  project owner's decision). Adjusted scores for every word are in
+  `data/interim/centrality/Ru#_betweenness.tsv`.
+
+### 11.2 Why
+
+Betweenness in a word-adjacency network is dominated by frequency. A frequent word has many
+neighbours and so lies on many shortest paths. Across all words, Spearman's ρ between betweenness and
+frequency is 0.75–0.78 in every translation (primary measure). The 1/count distance strengthens the
+effect: frequent pairs become short cuts, so the most frequent words collect still more paths. A
+rank difference between translations can therefore reflect how often a word is used rather than
+its structural role. The frequency adjustment separates the two. Unweighted betweenness is the
+standard measure, and the direction of an adjacency matters little for which words bridge the
+network (undirected against directed: ρ = 0.96–0.98 over the top 100).
+
+### 11.3 Effect
+
+**сказать and говорить.** Old rank against new rank under each variant, with each verb's frequency
+per 10,000 words. Adjusted: score, then rank among the 200 most frequent lemmas.
+
+| Word | Translation | Old | Old method, new network | New: undirected (primary) | New: directed | Adjusted score (z) | Adjusted rank | Per 10,000 words |
+|---|---|---|---|---|---|---|---|---|
+| сказать | Ru-1911 | 69 | 77 | 75 | 74 | 0.52 (−4.0) | 148 | 28 |
+| | Ru-1926 | 61 | 65 | 57 | 65 | 0.52 (−3.7) | 168 | 39 |
+| | Ru-1933 | 39 | 35 | 63 | 56 | 0.45 (−3.9) | 175 | 41 |
+| | Ru-1949 | 15 | 14 | 63 | 61 | 0.25 (−8.6) | 188 | 67 |
+| | Ru-1960 | 13 | 12 | 50 | 51 | 0.30 (−9.9) | 189 | 67 |
+| говорить | Ru-1911 | 93 | 98 | 77 | 76 | 0.64 (−3.0) | 133 | 24 |
+| | Ru-1926 | 65 | 74 | 72 | 69 | 0.52 (−3.6) | 166 | 29 |
+| | Ru-1933 | 60 | 69 | 65 | 62 | 0.54 (−3.4) | 157 | 34 |
+| | Ru-1949 | 21 | 27 | 32 | 30 | 0.33 (−8.8) | 179 | 94 |
+| | Ru-1960 | 15 | 36 | 35 | 34 | 0.45 (−7.6) | 166 | 71 |
+
+Does the early-versus-late shift survive?
+
+- **(a) The new networks: yes.** With the old method on the new, sentence-bounded networks, сказать
+  still climbs from 77 and 65 to 14 and 12, and говорить from 98 to 27 and 36.
+- **(b) Unweighted betweenness: not for сказать, partly for говорить.** Without the 1/count distance,
+  сказать ranks 50–75 in all five translations (Braude 63, the same as Chukovsky). The same happens on
+  the old networks: unweighted, сказать ranks 67, 72, 60, 60 and 45. The 1/count weighting created
+  the climb, not the network rebuild. говорить keeps a smaller gap (77, 72, 65 against 32 and 35).
+- **(c) Frequency adjustment: no, and the direction reverses.** In every translation both verbs are
+  less central than their frequency predicts (scores 0.25–0.64, z −3 to −10). The shortfall is
+  largest in Braude and Daruzes (сказать 0.25 and 0.30, against 0.45–0.52 in the earlier three).
+  What changes between early and late translations is **frequency**: Braude and Daruzes use сказать
+  more than twice as often as Engel'gardt (67 against 28 per 10,000 words), and говорить three to four
+  times as often. The 1/count distance turned that frequency into rank.
+
+The underlying difference is real and worth reporting: the later translations use speech verbs much
+more often, most likely in dialogue attributions such as «сказал я». But it is a difference in word
+frequency, not in the words' role as bridges in the network.
+
+**и, я, в.** All three remain in the top 5 of every translation under all three unweighted and
+weighted variants (я is 5th in Daruzes on the primary measure). On the primary measure и is first in all
+five. Adjusted for frequency, и remains a strong bridge (scores 1.8–2.2, top 12 among the 200 most
+frequent lemmas), в a moderate one (1.15–1.33), and я falls below 1 (0.65–0.83): its rank comes from
+frequency alone.
+
+**The Figure 12 words.** Under the primary measure every translation's top 10 is drawn from the same
+12 function words: и, в, я, не, он, на, быть, с, что, мы, они, а. Among the old Figure 12 columns, two words move a lot for reasons other than
+centrality:
+
+- **тот** (old Ru-1911 rank 9; new 53 with the old method, 158 unweighted). Stanza lemmatizes «то»
+  as «то» (812 occurrences in Ru-1911), where pymorphy2 folded much of it into «тот».
+- **знать** (old 11–23). It keeps that rank under 1/count weighting but falls to 92–235 unweighted.
+  Its weighted rank came from frequent pairs such as «не знать».
+
+Full old-versus-new tables for the 29 Figure 12 words under each variant:
+`docs/centrality/centrality_report.md`.
+
+**Rank stability** (Spearman ρ of full ranks over the union of two variants' top 100): undirected
+against directed 0.96–0.98, undirected against weighted 0.80–0.85, and every raw variant against the
+frequency-adjusted ranking −0.19 to 0.06. The frequency-adjusted ranking measures something different.
+
+**Figure 12 (replacement).** Primary measure, in the old layout: the union of each translation's top
+20, sorted by mean rank, first 30 words.
+
+![Figure 12 (replacement)](figures/fig12_betweenness_rank_heatmap_greyscale.png)
+
+*Figure 12 (replacement): Betweenness rank (undirected, unweighted; 1 = most central) of the
+leading bridge words. The same function words lead in every translation.*
+
+![Figure 12b (new)](figures/fig12b_betweenness_adjusted_rank_heatmap_greyscale.png)
+
+*Figure 12b (new): Rank by frequency-adjusted betweenness among each translation's 200 most frequent
+lemmas ("—": not among them). Words ranked high bridge more than their frequency predicts.*
+
+**Impact levels.**
+
+| Change | Old → new | Reason | Impact level |
+|---|---|---|---|
+| Network description | "full, unlemmatized network" → lemmatized, directed, across sentence boundaries, distance 1/count (old); lemmatized, sentence-bounded (new) | The old description was wrong | Wording |
+| Measure | Directed, distance 1/count → exact unweighted undirected betweenness (directed and 1/count as checks) | 1/count distances turn frequency into rank | Numbers (Figure 12 replaced) |
+| Frequency adjustment | None → real / shuffled betweenness (30 shuffles), ranked among the 200 most frequent lemmas | Betweenness tracks frequency (ρ = 0.75–0.78) | Wording (Figure 12b added) |
+| сказать / говорить | "Skyrockets in importance" in Braude and Daruzes → a frequency difference; no climb in unweighted rank for сказать; both verbs less central than frequency predicts in every translation, most of all in Braude and Daruzes | Weighting and frequency | Finding |
+| и, я, в top 5 | Holds | — | None |
+| тот, знать | Large rank changes | Lemmatizer (тот), weighting (знать) | Numbers |
+
+### 11.4 Suggested article text
+
+**§3.4.2, Centrality Rankings.** Replace "We calculated betweenness centrality for the full,
+unlemmatized network." with:
+
+> We calculated exact betweenness centrality on each translation's word-adjacency network (lemmas,
+> stop words retained, edges within sentences), treating the network as undirected and unweighted.
+> Because betweenness in such networks largely follows word frequency (Spearman's ρ between the two
+> is 0.75–0.78 in every translation), we also computed a frequency-adjusted score following Amancio
+> (2015): each word's betweenness divided by its mean betweenness in 30 networks built from the same
+> text with the words shuffled, sentence lengths kept.
+
+Replace the paragraph after Figure 12, from "As expected, all five translators share …" to "… a more
+significant bridge for Daruzes at rank 15.", with:
+
+> As expected, all five translations share the same leading bridges, high-frequency function words:
+> the conjunction и ranks first in every translation, and the pronoun я and the preposition в are in
+> the top 5 of all five. This confirms that the fundamental grammar of Russian serves as the primary
+> bridge for all translators. Adjusted for frequency, и remains a stronger bridge than its frequency
+> predicts, while я does not.
+>
+> The verbs of speech differ in frequency rather than in structural role. Braude and Daruzes use
+> сказать more than twice as often as Engel'gardt (67 against 28 times per 10,000 words) and говорить
+> three to four times as often. In unweighted betweenness, however, сказать ranks between 50th and
+> 75th in all five translations, and after frequency adjustment both verbs are less central than
+> their frequency predicts in every translation, most of all in Braude and Daruzes. The later
+> translations use speech verbs more, most likely in dialogue attributions, but these verbs are not
+> bridges in the network.
+
+**Figure 12 caption.** Replace with:
+
+> Figure 12: Betweenness rank (1 = most central) of the leading bridge words in each translation,
+> undirected and unweighted. The same function words lead in every translation.
+
+**Executive Summary.** Replace "betweenness centrality analysis found a wide range of data when
+ranking the most connective nodes across the corpus, suggesting that different translators had quite
+different preferences for which stop words they relied upon" with:
+
+> betweenness centrality shows the same high-frequency function words as the main bridges in every
+> translation; the later translations use verbs of speech (сказать, говорить) far more often, but
+> these verbs are not more central once frequency is taken into account
+
+Add Amancio (2015)¹⁵ to the article's bibliography.
 
 ---
 
@@ -1130,3 +1311,9 @@ To be completed.
     Linguistic Computing Bulletin* 7, 172–177 (1979).
 14. Shen, L. LexicalRichness: a small module to compute textual lexical richness.
     https://github.com/LSYS/LexicalRichness. Used (cross-check only): version 0.5.1.
+15. Amancio, D. R. A complex network approach to stylometry. *PLoS ONE* 10, e0136076 (2015).
+16. Csárdi, G. & Nepusz, T. The igraph software package for complex network research.
+    *InterJournal, Complex Systems* 1695 (2006). Used: python-igraph 1.0.0.
+17. Hagberg, A. A., Schult, D. A. & Swart, P. J. Exploring network structure, dynamics, and function
+    using NetworkX. In *Proceedings of the 7th Python in Science Conference (SciPy 2008)*, 11–15
+    (2008). Used (cross-check): version 3.7.

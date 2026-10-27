@@ -22,6 +22,10 @@ old_zscores = "docs/audit/report3_fig9_zscores.csv"   # Figure 9 of Final Report
 classic_report = "docs/classic/classic_report.md"
 classic_results = "data/interim/lexical/results.json"   # every computed value, for later stages
 figures_dir = "docs/amendment/figures"
+centrality_report = "docs/centrality/centrality_report.md"
+centrality_results = "data/interim/centrality"         # per-text score tables (all variants, shuffles summary)
+old_repo = "/Users/vixtalbot/Code/nlp-descriptive-russian-translations"   # read-only reference (tag report-v3)
+old_centrality_dir = "mfinder-analysis"               # inside old_repo: Ru#_betweenness_rankings.csv, Ru#_mfinder_input.txt, Ru#_word_id_mapping.json
 
 [corpus]
 texts = ["Ru1", "Ru2", "Ru3", "Ru4", "Ru5"]
@@ -339,3 +343,37 @@ honore = { Ru1 = 1955.2, Ru2 = 2060.3, Ru3 = 1962.9, Ru4 = 1963.8, Ru5 = 1943.3 
 msttr = { Ru1 = 0.552, Ru2 = 0.520, Ru3 = 0.519, Ru4 = 0.498, Ru5 = 0.485 }
 sentence_length = { Ru1 = 18.6, Ru2 = 17.0, Ru3 = 15.0, Ru4 = 20.0, Ru5 = 19.2 }
 entropy = { Ru1 = 9.949, Ru2 = 9.516, Ru3 = 9.622, Ru4 = 9.326, Ru5 = 9.362 }
+
+# --- Betweenness centrality (centrality.py) ----------------------------------------------
+
+[centrality]
+# Networks: the frozen networks-v1 files (data/interim/networks), checked against paths.network_checksums.
+# Variants (betweenness normalized as networkx does: divided by (n-1)(n-2), halved for undirected; n = all nodes):
+#   undirected  - primary: exact, unweighted, on the undirected version (an edge in either direction links the pair)
+#   directed    - secondary: exact, unweighted, directed
+#   weighted    - sensitivity, the old method: directed, distance = 1 / bigram count
+variants = ["undirected", "directed", "weighted"]
+primary = "undirected"
+crosscheck_text = "Ru2"          # smallest network: igraph vs networkx, unweighted undirected
+crosscheck_abs_tol = 1e-9        # on normalized betweenness
+
+# Frequency adjustment (Amancio 2015): the text's word tokens are shuffled across the whole text and
+# refilled into the sentences, keeping every sentence's length; each shuffled network is rebuilt with the
+# network rules (sentence-bounded, self-loops dropped) and its undirected unweighted betweenness computed.
+# adjusted = real / mean(shuffled); z = (real - mean) / sd (ddof = 1). Undefined when the mean (or sd) is 0.
+# Generator: numpy default_rng([master_seed, text index]), one per text, permutations drawn in order.
+shuffles = 30
+shuffle_sd_ddof = 1
+master_seed = 20261027           # separate from 20261022 (POS), 20261023 (mfinder), 20261026 (lexical)
+# Adjusted ranks, top lists, stability and heatmap use only each text's most frequent lemmas (project owner's
+# decision, 2026-10-27): ranked by adjusted score, words seen once dominate (their shuffled mean is tiny and noisy).
+# Eligible: frequency >= the frequency of the text's adjusted_rank_top_frequent-th most frequent lemma (ties included).
+adjusted_rank_top_frequent = 200
+
+top_n = 30                       # words listed per text and ranking
+stability_top_n = 100            # Spearman over the union of the two variants' top-100 words, full ranks
+heatmap_top_n = 20               # old Figure 12: union of each text's top 20 ...
+heatmap_max_columns = 30         # ... sorted by mean rank (absent word: rank heatmap_absent_rank), first 30 kept
+heatmap_absent_rank = 1000       # old code's penalty when sorting columns
+heatmap_color_max = 100          # colour scale clipped here; cells show the actual rank
+focus_words = ["сказать", "говорить", "и", "я", "в"]
