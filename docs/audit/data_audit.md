@@ -660,3 +660,61 @@ Motifs whose member counts are identical in all 5 texts: 13 of 13. Since NREAL i
 1001 × 6/|Aut(motif)| (e.g. 238, fully mutual triad, 6 automorphisms → 1001; 38, feed-forward
 loop, 1 automorphism → 6006); that mechanism is inferred, not verified in mfinder's source.
 
+
+<!-- Hand-written below this line; kept by scripts/audit_data.py on re-runs. -->
+
+## Old local folder inventory (2026-10-27)
+
+On 2026-10-27 the old repository folder was replaced, at the same path, by a full copy of the project
+owner's old local working folder. It is still read-only reference. Checked without writing to it
+(`GIT_OPTIONAL_LOCKS=0` for every git command).
+
+**Git state.** HEAD is `f74275d` (2025-11-24, "Updated ReadMe and replaced directory naming convention
+in later scripts"), the commit tagged report-v3 earlier. This copy has **no tags**, so `report-v3` does
+not resolve here; HEAD is the same commit. Branch `main` (plus `origin/main`). One change to a tracked
+file: `Reference Articles/.DS_Store` deleted (binary, 6,148 bytes). No untracked files outside the
+ignore rules. 275 tracked files: scripts 01–26, README, `En.txt`, `Ru1–5.txt` (force-added despite the
+`Ru*.txt` ignore rule), 234 chapter files and 7 reference articles.
+
+**Ignored files** (the `.gitignore` excludes `*.csv`, `*.json`, `*.png`, `*.pdf`, `*.docx`, the
+lemmatized texts, mfinder outputs and `.venv`):
+
+| Folder | Files | Modified | Contents |
+|---|---|---|---|
+| top level | 29 | 2025-07-22 – 2026-05-19 | `Ru#_clean_lemmatized(_nostops).txt`, `Ru#_features.json`; result CSVs: `stylometric_summary.csv`, `lexical_diversity_results.csv`, `entropy_analysis_results.csv` (2025-10-10), `significance_profile_conceptual.csv` (2025-11-19), `document_term_matrix(_with_stops).csv` (2025-08-07); motif icons; **`features_lsv1_general_occupancy.csv`, `features_lsv2_position_occupancy.csv`, `pca_lsv1/2_*.png` (2026-05-19)** |
+| `mfinder-analysis/` | 50 | 2025-07-22 – 2025-11-19 | mfinder inputs, `_OUT` and members files (audited above); betweenness rankings, community assignments and reports, motif reports, word-id maps |
+| `Greyscale Graphs/` | 33 | 2025-08-28 – 2025-11-20 | the report's figures |
+| `Color Graphs/` | 29 | 2025-08-07 – 2025-09-10 | earlier colour figures |
+| `diagnostics/` | 6 | 2025-11-19 | POS distribution charts, diagnostic table |
+| `Notes/` | 19 | 2025-06-30 – 2026-06-12 | mfinder manual, motif dictionary, feedback documents; `Notes/Final Report/` holds `Final Report 3.pdf` and drafts |
+| `Presentations/` | 5 | 2025-07-02 – 2025-11-20 | slides and notes |
+| `mfinder_mac/` | 50 | 2006-06-11 – 2025-07-22 | mfinder source and objects |
+| `.venv/` | 15,024 | 2025-11-15 – 2025-11-19 | Python 3.9.16 (miniconda), 497 MB |
+
+**Scripts not in git.** None: every `.py`/`.sh`/`.ipynb` file in the folder is tracked. But the
+labelled-subgraph experiments of §3.5 left outputs with **no script anywhere in the folder or its git
+history**: `features_lsv1_general_occupancy.csv` (LSV1, word × triad-position occupancy, e.g.
+`LSV1_и_Index1`), `features_lsv2_position_occupancy.csv` (LSV2, source/bridge/sink roles) and their PCA
+plots, all dated 2026-05-19, six months after the report. Scripts that existed in history but were
+deleted before HEAD include `18create_syntactic_network.py`, `21parse_mfinder_results_syntactic.py`,
+`extract_word_clusters_syntactic.py`, `create_classic_delta.py`, `cosine_cluster_analysis.py`,
+`ttr-entropy.py` and `diagnostic.py`.
+
+**Re-verification against this copy.**
+
+- Raw texts: `Ru1–5.txt` are byte-identical to `data/raw/` (SHA-256 as in the table at the top).
+- mfinder files: all 20 audited files have the same size and modification time; the five inputs
+  have the same SHA-256; re-parsing every `_OUT` and members file gives exactly the values stored in
+  `data_audit.json`; the Z tables (`old_mfinder_zscores_input_OUT.csv`, `…_stats_OUT.csv`) match all
+  130 cells. The old betweenness rankings used in Section 11 of the amendment report give the same
+  170 ranks quoted there.
+- `Final Report 3.pdf` now lives in `Notes/Final Report/`, not at the top level. No checksum of the
+  copy read earlier was recorded, so byte identity cannot be shown; its extracted text (all 25 pages)
+  is identical to the earlier extraction and Figures 1–5 are pixel-identical. `Final Report
+  Draft(3).pdf` has the same size and content and differs only in its creation timestamp (both
+  2026-06-12).
+- Old result CSVs: `stylometric_summary.csv` and `lexical_diversity_results.csv` reproduce exactly
+  from the old lemmatized files with the old formulas, and round to the bar labels of Figures 1–5.
+  `lexical_diversity_results.csv` names its inputs `Ru#_clean_nostops.txt`, the earlier name of
+  `Ru#_clean_lemmatized_nostops.txt`; at commit `22988a4` (2025-10-05) the two files are
+  byte-identical, as are `Ru#_clean.txt` and `Ru#_clean_lemmatized.txt`.

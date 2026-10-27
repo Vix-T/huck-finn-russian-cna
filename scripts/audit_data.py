@@ -869,6 +869,16 @@ def members_cell(entry: dict | None) -> str:
 # --- Main ------------------------------------------------------------------
 
 
+# Text from this marker to the end of data_audit.md is written by hand and kept when the audit is re-run.
+HAND_WRITTEN_MARKER = "<!-- Hand-written below this line; kept by scripts/audit_data.py on re-runs. -->"
+
+
+def keep_hand_written(previous: str, generated: str) -> str:
+    """The generated report plus any hand-written tail (from HAND_WRITTEN_MARKER on) of the previous one."""
+    i = previous.find(HAND_WRITTEN_MARKER)
+    return generated if i < 0 else generated.rstrip("\n") + "\n\n" + previous[i:]
+
+
 def main() -> None:
     texts = [audit_text(RAW_DIR / name, label) for name, label in TEXTS]
     mfinder = audit_mfinder()
@@ -877,7 +887,9 @@ def main() -> None:
         json.dumps({"texts": texts, "mfinder": mfinder}, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    (AUDIT_DIR / "data_audit.md").write_text(render_markdown(texts, mfinder), encoding="utf-8")
+    md_path = AUDIT_DIR / "data_audit.md"
+    previous = md_path.read_text(encoding="utf-8") if md_path.exists() else ""
+    md_path.write_text(keep_hand_written(previous, render_markdown(texts, mfinder)), encoding="utf-8")
     csvs = write_zscore_csvs(mfinder)
     print(f"Wrote {AUDIT_DIR / 'data_audit.md'}, data_audit.json and {', '.join(p.name for p in csvs)}")
 

@@ -9,6 +9,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import audit_data as a  # noqa: E402
 
 
+class HandWrittenTests(unittest.TestCase):
+    def test_keeps_tail_from_marker(self):
+        previous = "# Old generated\n\n" + a.HAND_WRITTEN_MARKER + "\n\n## Notes\nkept\n"
+        out = a.keep_hand_written(previous, "# New generated\n")
+        self.assertTrue(out.startswith("# New generated\n\n" + a.HAND_WRITTEN_MARKER))
+        self.assertTrue(out.endswith("## Notes\nkept\n"))
+
+    def test_no_marker_returns_generated(self):
+        self.assertEqual(a.keep_hand_written("# Old\n", "# New\n"), "# New\n")
+
+
 class ReadingTests(unittest.TestCase):
     def test_decode_strips_bom_and_normalizes_newlines(self):
         raw = "﻿Первая\r\nВторая\rТретья\n".encode("utf-8")
