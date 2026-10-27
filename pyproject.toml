@@ -12,6 +12,8 @@ dependencies = [
     "pymorphy3-dicts-ru>=2.4.417150.4580142",
     "razdel==0.5.0",
     "ru-core-news-lg",
+    "scikit-learn>=1.9.1",
+    "scipy>=1.18.1",
     "spacy>=3.8.16",
     "stanza>=1.15.0",
 ]

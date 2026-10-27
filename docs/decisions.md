@@ -280,3 +280,44 @@ Plan: `docs/plan/betweenness.md`. Implemented in `src/huckfinn_cna/centrality.py
     and `stylometric_summary.csv` (chunked TTR, sentence length, unigram entropy); the figure-label
     readings are kept as `figure_labels`. Every exact value recomputes from the old lemmatized files with
     the old formulas and rounds to its figure label, so no reading differed.
+
+## Delta, clustering and embedding (2026-10-27)
+
+Plan: `docs/plan/delta_clustering.md`. Implemented in `src/huckfinn_cna/delta.py`; parameters in config
+`[delta]`; report `docs/delta/delta_report.md`; figures `docs/amendment/figures/fig7_*`, `fig8_*`,
+`fig13_*`, `delta_consensus_*`, `appendix_spectral_*`. New dependencies: scipy, scikit-learn.
+
+47. **Units and features.** Blocks: 5,000 word tokens from a paragraph start, each next block starting
+    at the first paragraph start at or after the previous block's end (the rule of decision 33);
+    remainder dropped (Ru1 22, Ru2 9, Ru3 12, Ru4 18, Ru5 18 blocks). Relative frequency = count / all
+    word tokens in the unit, in both views (the content view uses the same blocks). MFW ranked by mean
+    block relative frequency, ties alphabetical; culling 100% = present in all five whole texts.
+    z-scores with block means and SDs (ddof 1), applied to blocks and whole texts.
+48. **Distances, clustering, consensus.** Cosine Delta = 1 − cos(z); Classic Delta = Σ|Δz| / N. Linkage
+    on the condensed vector: average (primary), complete (check); Ward only on Euclidean distance of
+    L2-normalized z-vectors. Primary setting: all words, 300 MFW, culling 0%, Cosine Delta. Consensus:
+    40 trees (10 N × 2 culling × 2 distances, view all); clades in ≥ 50% enter; clades that conflict
+    at the threshold are dropped and listed. Eder network: weights 1, 0.5, 0.5 for each text's three
+    nearest texts, summed over the same 40 settings, undirected.
+49. **Block diagnostics.** Coherence (same-translation nearest neighbour), silhouette (precomputed
+    distances, label = translation), nearest other-translation neighbour matrix; added: story-position
+    gap (|difference of block centres as a share of each text| between a block and its nearest
+    other-translation block, against the mean over all other-translation blocks) and shared word
+    n-grams (n = 5, 8; surface forms, lowercased, ё → е) between texts. Both added diagnostics answer
+    the plan's "do blocks group by translation" check; neither changes a method.
+50. **PCA, MDS, spectral.** PCA (sklearn, full SVD) of block z-scores at 100, 300, 1,000 MFW; a PC is
+    flagged "abridged vs full" when that grouping explains ≥ 50% of its variance (η²). Classical
+    (Torgerson) MDS of the text-level Cosine Delta at 300 MFW, culling 0%. Spectral: cosine affinity of
+    text z-vectors with negatives set to 0, `spectral_embedding(norm_laplacian=True, drop_first=True,
+    random_state=20261027)`; the number of connected components and the normalized-Laplacian
+    eigenvalues are reported, and the layout is compared across random_state 0, 1, 2, 42.
+51. **Old values.** Recomputed exactly from the old local folder (read-only): Figure 7 = cosine
+    similarity of `document_term_matrix_with_stops.csv` (equal to the counts of
+    `Ru#_clean_lemmatized.txt`; all 25 printed values match); old Classic Delta = z over the 5 DTM rows
+    (ddof 0) with Ward; old cosine dendrogram = Ward given the square matrix; Figure 8 = TfidfVectorizer
+    on `Ru#_clean_lemmatized.txt`, cosine affinity, `spectral_embedding(random_state=42)` (coordinates
+    match the plot). The content DTM (`document_term_matrix.csv`) equals the counts of
+    `Ru#_clean_lemmatized_nostops.txt`.
+52. **Figure 13.** Top 30 content lemmas (Stanza UPOS in `tag.content_upos`) by total count over the
+    five texts, ranked within that set per text (competition ranks), as the old script ranked within its
+    30 words.

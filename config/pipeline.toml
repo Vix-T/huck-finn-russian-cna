@@ -25,6 +25,8 @@ figures_dir = "docs/amendment/figures"
 centrality_report = "docs/centrality/centrality_report.md"
 centrality_results = "data/interim/centrality"         # per-text score tables (all variants, shuffles summary)
 old_repo = "/Users/vixtalbot/Code/nlp-descriptive-russian-translations"   # read-only reference (tag report-v3)
+delta_report = "docs/delta/delta_report.md"
+delta_results = "data/interim/delta"                  # distance matrices and block tables (all settings)
 old_centrality_dir = "mfinder-analysis"               # inside old_repo: Ru#_betweenness_rankings.csv, Ru#_mfinder_input.txt, Ru#_word_id_mapping.json
 
 [corpus]
@@ -381,3 +383,49 @@ heatmap_max_columns = 30         # ... sorted by mean rank (absent word: rank he
 heatmap_absent_rank = 1000       # old code's penalty when sorting columns
 heatmap_color_max = 100          # colour scale clipped here; cells show the actual rank
 focus_words = ["сказать", "говорить", "и", "я", "в"]
+
+# --- Delta, clustering and embedding (delta.py) --------------------------------------------
+
+[delta]
+# Tokens: word tokens, Stanza lemma lowercased, networks.lemma_char_map (ё -> е). View "all" (primary) counts every
+# word token; view "content" counts tokens whose Stanza UPOS is in tag.content_upos. The denominator of a relative
+# frequency is always the unit's total word tokens (all words), in both views.
+views = ["all", "content"]
+primary_view = "all"
+# Blocks: block_words consecutive word tokens starting at a paragraph start; each next block starts at the first
+# paragraph start at or after the previous block's end (the rule of lexical equal-length samples); remainder dropped.
+block_words = 5000
+# MFW: ranked by the mean over all blocks (all texts) of per-block relative frequency (stylo convention); ties
+# alphabetical. Culling 100 = keep only words that occur in all five whole texts.
+mfw = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+culling = [0, 100]
+distances = ["cosine", "classic"]   # Cosine Delta = 1 - cos(z_a, z_b); Classic Delta = sum |z_a - z_b| / N
+zscore_ddof = 1                     # column means and SDs over all blocks of all texts; applied to blocks and whole texts
+primary = { mfw = 300, culling = 0, distance = "cosine" }
+linkage = "average"                 # primary; "complete" as a check
+linkage_check = "complete"
+ward_check = true                   # Ward on Euclidean distance between L2-normalized z-score vectors (sensitivity)
+consensus_threshold = 0.5           # majority rule: a clade enters when it occurs in >= this share of trees
+eder_weights = [1.0, 0.5, 0.5]      # nearest neighbour, then the two runners-up
+# PCA on standardized block-level relative frequencies (z-scores as above), view all, culling 0.
+pca_mfw = [100, 300, 1000]
+pca_components = 4
+pca_top_loadings = 10
+abridged = ["Ru2", "Ru3"]
+abridged_flag_eta2 = 0.5            # flag a PC when the abridged/full grouping explains >= this share of its variance
+# Classical (Torgerson) MDS on the text-level Cosine Delta matrix at mds_setting.
+mds_setting = { mfw = 300, culling = 0 }
+# Spectral embedding (appendix): text-level z-scores at the primary setting, cosine affinity with negatives set to 0,
+# sklearn.manifold.spectral_embedding(norm_laplacian=True, drop_first=True).
+spectral_random_state = 20261027
+spectral_check_states = [0, 1, 2, 42]   # layouts compared across these random_states
+# Diagnostic: shared word n-grams between each pair of texts (surface word tokens, lowercased, ё -> е); tests whether
+# two translations share wording (textual dependence) rather than only style.
+overlap_ngrams = [5, 8]
+# Appendix Figure 13: content words, the top N by total count over the five texts, ranked within that set per text.
+fig13_top_n = 30
+# Old files (in paths.old_repo, read-only) used to recompute the old Figures 7-8 and the old Delta exactly.
+old_dtm_all = "document_term_matrix_with_stops.csv"
+old_dtm_content = "document_term_matrix.csv"
+old_lemmatized = "Ru{i}_clean_lemmatized.txt"
+old_tfidf_random_state = 42

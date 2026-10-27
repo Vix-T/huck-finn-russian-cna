@@ -80,3 +80,13 @@ replacement text for §3.3 and the relevant §3.5 sentences), and update the Exe
 Run the tests, confirm the raw checksums are unchanged, commit (no push), and summarize, leading
 with: do blocks group by translation, which pairings survive, and is spectral embedding stable
 enough to keep even in the appendix.
+
+## Status (2026-10-27)
+
+All items done. Before this stage the old repository folder was replaced by the old local working
+folder; its inventory and re-verification are in `docs/audit/data_audit.md`, and the classic-measure
+old values were updated to the exact CSV values. No old Delta or similarity CSV exists, but Figures 7
+and 8 and the old Delta recompute exactly from the old DTMs and lemmatized texts. Two diagnostics were
+added to answer item 3's "do blocks group by translation": story-position gap and shared n-grams
+(decision 49). They show that blocks group by story position (Engel'gardt excepted) and that
+Ru-1926 and Ru-1933 share 30% of their eight-word sequences.

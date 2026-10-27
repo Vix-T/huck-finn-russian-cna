@@ -10,10 +10,10 @@ each pipeline stage, and the Executive Summary is updated with it.
 
 ## 1. Executive Summary
 
-We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. Six stages are
+We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. Seven stages are
 complete: the data audit with text preparation, an audit of the previous motif results,
 tokenization with part-of-speech tagging, network construction, the classic stylometric measures,
-and betweenness centrality.
+Delta with clustering and embedding, and betweenness centrality.
 
 **Text preparation** changes how the article should describe its data. The 1911 Engel'gardt text (Ru-1911) contains OCR damage, mainly words split by stray
 spaces. We repaired it, which reduces its vocabulary by 382 word types (1.8%). In the other four
@@ -64,6 +64,16 @@ libraries that agree on every value, with mfinder 1.2 kept as a cross-check, usi
 seed. The motif and centrality values are recomputed in the next stages. For this stage only the
 article's description of the network changes (Data Pipeline, §3.4).
 
+**Delta and clustering confirm two pairings but withdraw the spectral embedding.** With Burrows's
+Cosine Delta over 40 settings, Braude–Daruzes and Anon–Chukovsky pair in every tree. But the 1926 and
+1933 texts share 30% of their eight-word sequences: the 1933 edition is largely a revision of the 1926
+text, so their closeness is not independent style. Engel'gardt is the most distant translation, and
+its 5,000-word passages are the only ones recognizable as one translator's. Passages of the other four
+match the same stretch of the story in another translation more than their own text. The spectral
+embedding of §3.3 is degenerate on standard features and was ill-conditioned in its old form; it is
+replaced by a Delta tree and an MDS map (Figures 7–8). The old Figure 7 was a cosine similarity of
+raw counts, not Delta (Section 8).
+
 **Betweenness centrality withdraws the сказать/говорить finding.** The article reports that
 сказать and говорить become major bridge words in the 1949 Braude and 1960 Daruzes translations
 (сказать ranks 15 and 13, against 69 and 61 in the early translations). That rank comes from the old
@@ -111,6 +121,12 @@ five translations (Section 10).
 | Classic Stylometric Measures | Sentence length without punctuation (11.3–14.5 words); Braude, Engel'gardt, Daruzes not distinguishable; abridged texts shorter | Finding | §3.2.1, Figure 4 |
 | Classic Stylometric Measures | Bootstrap intervals for sentence length, K and HD-D; paragraph bootstrap found biased for MSTTR, MATTR, MTLD, R, entropy | Wording | §3.1, §3.2.1 |
 | Classic Stylometric Measures | Old fusion of hyphenated words moves no measure by more than 0.4% | None | — |
+| Delta, Clustering and Embedding | Cosine similarity of raw counts → Cosine Delta on z-scored MFW over 40 settings; consensus tree and network | Figure | §3.3, Figure 7 |
+| Delta, Clustering and Embedding | Only Engel'gardt's 5,000-word blocks group by translation; others match by story position | Finding | §3.3 |
+| Delta, Clustering and Embedding | Anon–Chukovsky share 30% of 8-grams: textual dependence, not convergent style | Finding | §3.3; Data Pipeline |
+| Delta, Clustering and Embedding | Braude–Daruzes pairing holds in 40 of 40 trees | None | — |
+| Delta, Clustering and Embedding | Spectral embedding dropped (degenerate on new features, ill-conditioned in old); replaced by MDS | Finding | §3.3, Figure 8 |
+| Delta, Clustering and Embedding | §3.5 agreement with Delta/spectral: Delta side partly holds; motif side pending | To be decided | §3.5 |
 | Betweenness Centrality | Old network described as "unlemmatized"; it was lemmatized, directed, across sentences, distance 1/count | Wording | §3.4.2 |
 | Betweenness Centrality | Exact unweighted undirected betweenness (directed and the old 1/count as checks); igraph = networkx | Numbers | §3.4.2, Figure 12 |
 | Betweenness Centrality | Frequency adjustment (30 shuffles per text) added; betweenness tracks frequency (ρ = 0.75–0.78) | Wording | §3.4.2 |
@@ -953,7 +969,202 @@ Add McCarthy & Jarvis (2007, 2010)⁹ ¹⁰, Covington & McFall (2010)¹¹, Yule
 
 ## 8. Delta, Clustering and Embedding
 
-To be completed.
+### 8.1 What changed
+
+**Old** (scripts `04`/`05`, `07`, `08`, `09`, `10`; all values below recomputed exactly from the old
+local folder, data audit "Old local folder inventory"):
+
+- **Figure 7** is the cosine similarity of **raw counts** over the full vocabulary of each whole text
+  (15,133 lemmas, stop words kept). It is not a Delta measure. All 25 printed values reproduce from
+  `document_term_matrix_with_stops.csv`, which equals the counts of `Ru#_clean_lemmatized.txt`.
+- **The old "Classic Delta"** z-scored the raw counts of the full vocabulary across the **five
+  documents** (population SD) and clustered with **Ward** on these non-Euclidean distances. The
+  cosine dendrograms passed the **square** distance matrix to `linkage`, which treats each row as a
+  feature vector and clusters those rows. Burrows's Delta instead uses relative frequencies of the
+  most frequent words, z-scored over a reference set.
+- **Figure 8** (spectral embedding) used TF-IDF vectors of the five whole texts. scikit-learn's
+  default token pattern drops one-letter words, so и, я, в, с, а, к, у, о were never counted:
+  12.6–15.3% of each text's tokens. The plotted coordinates reproduce exactly. §3.3 describes the
+  method as L = D − W; scikit-learn uses the symmetric normalized Laplacian I − D^−1/2 W D^−1/2, drops
+  the first eigenvector and rescales the next two by D^−1/2.
+- Five whole texts were the only units, so nothing tested whether the measures separate translators
+  at all.
+
+**New** (`src/huckfinn_cna/delta.py`):
+
+- **Features:** Stanza lemmas (ё → е), stop words kept (primary) and content words alone.
+- **Units:** paragraph-aligned 5,000-word blocks (Ru-1911 22, Ru-1926 9, Ru-1933 12, Ru-1949 18,
+  Ru-1960 18) and whole texts.
+- **MFW:** ranked by mean block relative frequency.
+- **z-scores:** column means and SDs over all 79 blocks, applied to blocks and whole texts alike.
+- **Distances:** Cosine Delta (primary) and Classic Delta, over a grid of 100–1,000 MFW at culling
+  0% and 100%.
+- **Clustering:** average linkage on the condensed distances, complete linkage and Ward (on
+  L2-normalized Euclidean distances) as checks. A majority-rule consensus tree and an Eder-style
+  consensus network over the 40 settings.
+- **Block-level checks:** nearest neighbours and silhouette.
+- **Embeddings:** PCA of the blocks, classical MDS of the texts, and spectral embedding as an
+  appendix check.
+
+### 8.2 Why
+
+Burrows's Delta and its cosine variant are the standard, validated distances for this question.
+Raw-count cosine on whole texts is dominated by the commonest words and by text length. Ward
+linkage assumes Euclidean distances. Five data points cannot show whether a method sees the
+translator rather than chance or plot. Blocks can: if the measures capture translator style, a
+translation's blocks should resemble each other more than they resemble other translations.
+
+### 8.3 Effect
+
+**Do blocks group by translation? Only Engel'gardt's do.** At the primary setting (all words, 300
+MFW, Cosine Delta) 32% of blocks have a nearest neighbour from the same translation, and the
+silhouette is 0.11. Engel'gardt's blocks are coherent (91%). The other four are not: Anon 0%,
+Chukovsky 17%, Braude 6%, Daruzes 11%. Across the grid coherence falls from 47% at 100 MFW to 3–6% at
+1,000. Among the four later translations alone it is at most 26% (100 MFW) and 0% at 1,000 MFW (Cosine Delta, culling 0%).
+
+What the blocks group by instead is **the story**. When a block's nearest neighbour comes from another
+translation, it lies at nearly the same point in the novel: the mean gap is 0.02–0.03 of the text's
+length, against about 0.33 if position did not matter, at every setting. With these measures, a
+5,000-word passage resembles the same passage in another translation more than another passage of
+its own translation. Between-translation claims below therefore rest on whole texts, and only
+Engel'gardt can be called stylistically distinct at block level.
+
+**Anon and Chukovsky share wording.** Every Anon block's nearest block from another translation is a
+Chukovsky block. They share 30% of Anon's distinct eight-word sequences (23% of Chukovsky's), against
+at most 0.7% for any other pair (Braude–Daruzes 0.7%, all others ≤ 0.3%). The 1933 Chukovsky-edited
+text is in large part a revision of the 1926 text, or both derive from a common source. Their
+closeness is textual dependence, not convergent style.
+
+**Whole texts: which pairings survive.**
+
+| Old (Figures 7–8) | New | Survives? |
+|---|---|---|
+| Anon–Chukovsky closest pair (cosine 0.9956) | Cosine Delta 0.33, the smallest distance by far; together in 40 of 40 trees | Yes, but it reflects shared wording |
+| Braude–Daruzes pair (0.9853) | 0.84; together in 40 of 40 trees; each the other's nearest text in every setting | Yes |
+| Engel'gardt apart (Figure 8); nearest Chukovsky (Figure 7) | Farthest from all (1.18–1.63). With Cosine Delta it joins the abridged pair in 20 of 20 trees; with Classic Delta it stands alone in 20 of 20 | Partly: most distant, but its attachment depends on the distance |
+
+Primary trees: average, complete and Ward linkage all give (((Anon, Chukovsky), Engel'gardt),
+(Braude, Daruzes)). Majority-rule consensus: ((Braude, Daruzes), (Anon, Chukovsky), Engel'gardt),
+with Engel'gardt's position unresolved. The consensus network gives the two pairs the maximum weight
+(80 of 80). Engel'gardt's strongest links are to Anon (48) and Chukovsky (38), and its weakest to
+Daruzes (2).
+
+**PCA of blocks.** No component mainly separates abridged from full texts: the abridged/full grouping
+explains at most 21% of any component's variance. PC1 (19% of variance at 100 MFW, 12% at 300, 8% at
+1,000) is the main translation axis (η² = 0.78–0.92; the only other component above 0.5 is PC4 at 100 MFW, 0.55). It runs from Engel'gardt through the abridged
+pair to Braude and Daruzes, from bookish words (затем, однако, свой, себя, в, образ) to colloquial
+ones (да, вот, ну, сказать, говорить). PC2 and PC3 are story axes: the river (река, берег, плыть)
+against the Phelps farm (Салли, Том), and the king and duke (король, герцог).
+
+**Classical MDS** (Figure 8 replacement): dimension 1 (58%) orders Engel'gardt → Anon/Chukovsky →
+Braude/Daruzes; dimension 2 (30%) separates Engel'gardt and the abridged pair.
+
+**Spectral embedding: not stable enough to keep, even in the appendix.** On the new features most
+cosine similarities between whole texts are negative: 8 of 10 pairs at every grid setting. Clipped
+to 0, they leave three disconnected components ({Engel'gardt}, {Anon, Chukovsky}, {Braude,
+Daruzes}). The normalized Laplacian then has λ1 = λ2 = λ3 = 0, so the layout is not unique: any
+basis of that three-dimensional null space is valid. The coordinates change with `random_state`, and
+Engel'gardt's apparent nearest neighbour changes across the grid. The old TF-IDF version was
+connected, but nearly complete (all affinities ≥ 0.948), and λ2–λ5 = 1.243, 1.248, 1.254, 1.255 lie
+within 0.012 of each other, so its second axis rests on a near-tie (λ3 − λ2 = 0.005). Spectral
+embedding adds nothing that MDS and the trees do not show more reliably.
+
+**Figure 13 (appendix).** The top 30 content lemmas (Stanza tags; the old figure used an NLTK
+stop-word list) ranked within that set per translation. говорить ranks 1st in Braude and 2nd in
+Daruzes against 6th–10th in the earlier three, and потом 8th in both against 18th–30th earlier. The
+same frequency shift appears in Section 11.
+
+**§3.5's claim of agreement with "Delta Burrows and spectral embedding clustering."** On the Delta
+side, two groupings are robust: Braude–Daruzes and Anon–Chukovsky. The second reflects shared
+wording, not independent stylistic choice, and spectral embedding cannot support any claim. Whether
+the network motifs agree can be judged only when the final motif results are in (Section 10). Until
+then the sentence should not claim agreement.
+
+**Figures (replacements).**
+
+![Figure 7 (replacement)](figures/fig7_cosine_delta_heatmap_dendrogram_greyscale.png)
+
+*Figure 7 (replacement): Cosine Delta between the translations (all words, 300 most frequent lemmas)
+and the average-linkage dendrogram.*
+
+![Figure 8 (replacement)](figures/fig8_mds_cosine_delta_greyscale.png)
+
+*Figure 8 (replacement): Classical multidimensional scaling of the Cosine Delta distances.*
+
+![Consensus tree](figures/delta_consensus_tree_greyscale.png)
+
+*Majority-rule consensus of 40 trees (100–1,000 MFW, culling 0% and 100%, Cosine and Classic
+Delta), with clade support.*
+
+![Consensus network](figures/delta_consensus_network_greyscale.png)
+
+*Consensus network over the same 40 settings (nearest neighbour weight 1, next two 0.5 each).*
+
+![Spectral embedding (appendix)](figures/appendix_spectral_embedding_greyscale.png)
+
+*Spectral embedding on the new features: degenerate (three disconnected components). Shown only to
+document why the method is dropped.*
+
+![Figure 13 (replacement)](figures/fig13_mfw_content_rank_heatmap_greyscale.png)
+
+*Figure 13 (replacement): Rank of the 30 most frequent content lemmas in each translation.*
+
+**Impact levels.**
+
+| Change | Old → new | Reason | Impact level |
+|---|---|---|---|
+| Distance | Cosine similarity of raw counts (full vocabulary) → Cosine Delta on z-scored MFW (Classic Delta as check), over a grid | Standard stylometric distance | Figure (Figure 7 replaced) |
+| Clustering | Ward on non-Euclidean distances; square matrix passed to linkage → average linkage on condensed distances; consensus tree and network | Correct use of linkage; robustness over settings | Wording |
+| Blocks | None → 79 blocks: only Engel'gardt's blocks group by translation; blocks otherwise match by story position | Tests whether the measures see translators | Finding |
+| Anon–Chukovsky | "Abridged pair" with similar style → shared wording (30% of 8-grams) | Textual dependence | Finding |
+| Braude–Daruzes pair | Holds (40 of 40 trees) | — | None |
+| Engel'gardt | Outlier → most distant, but grouped with the abridged pair under Cosine Delta | Distance-dependent | Wording |
+| Spectral embedding (§3.3, Figure 8) | Main 2-D map → dropped; degenerate on the new features, ill-conditioned in the old version | Not a unique layout | Finding (Figure 8 replaced by MDS) |
+| PCA | Not reported → PC1 is a translation axis (colloquial vs bookish); no abridged/full component | — | Wording |
+| Figure 13 | NLTK stop list, pymorphy2 lemmas → Stanza content lemmas | Same units as the rest | Figure |
+| §3.5 agreement claim | Asserted → Delta side: two robust pairs, one reflecting shared wording; motif side pending | — | To be decided (Section 10) |
+
+### 8.4 Suggested article text
+
+**§3.3.** Retitle "Delta Distance and Clustering". Replace the section, from "Spectral Embedding allows
+us to visualize …" to the paragraph after Figure 8, with:
+
+> To compare the translations as wholes we used Burrows's Delta in its cosine form, the standard
+> distance for stylometric attribution. Each text was represented by the relative frequencies of its
+> most frequent lemmas (stop words included), standardized against 79 passages of 5,000 words drawn
+> from all five translations; the distance between two texts is one minus the cosine of their
+> standardized profiles. Because results can depend on the number of words used, we repeated the
+> analysis for 100 to 1,000 most frequent words, with and without restricting them to words found in
+> every translation, and with Burrows's original (Classic) Delta, and summarized the 40 resulting
+> trees in a majority-rule consensus.
+>
+> Two pairings appear in every one of the 40 trees: Braude with Daruzes, and the abridged 1926 and
+> 1933 texts with each other (Figure 7). The second pair is a special case: the two texts share 30%
+> of their eight-word sequences, against at most 0.7% for any other pair, so the 1933 edition is in
+> large part a revision of the 1926 text rather than an independent translation. Engel'gardt is the
+> most distant translation from all others; whether it groups with the abridged texts or stands
+> alone depends on the distance used. A two-dimensional map of the distances (Figure 8) orders the
+> translations from Engel'gardt through the abridged texts to Braude and Daruzes.
+>
+> At the level of 5,000-word passages, only Engel'gardt's text is consistently recognizable: for the
+> other four translations, a passage resembles the same passage of the story in another translation
+> more than other passages by its own translator. Comparisons between those four translations are
+> therefore made on whole texts only.
+
+**Figure 7 caption:** "Cosine Delta between the translations (300 most frequent lemmas) and the
+resulting average-linkage tree." **Figure 8 caption:** "Classical multidimensional scaling of the
+Cosine Delta distances." In the table of visualizations, replace "Spectral Embedding 2D Plot" with
+"Delta distance map (MDS)".
+
+**§3.5.** Replace "and that there are patterns that agree with our Delta Burrows, and spectral
+embedding clustering of the translator's styles" with:
+
+> and Delta distances group Braude with Daruzes, as well as the 1926 text with its 1933 revision;
+> whether the network motifs show the same grouping is assessed with the final motif results
+
+(to be revised once Section 10 is final).
+
+Add Burrows (2002)¹⁸, Smith & Aldridge (2011)¹⁹ and Eder (2017)²⁰ to the article's bibliography.
 
 ## 9. Network Construction
 
@@ -1320,3 +1531,9 @@ Add Amancio (2015)¹⁵ to the article's bibliography.
 17. Hagberg, A. A., Schult, D. A. & Swart, P. J. Exploring network structure, dynamics, and function
     using NetworkX. In *Proceedings of the 7th Python in Science Conference (SciPy 2008)*, 11–15
     (2008). Used (cross-check): version 3.7.
+18. Burrows, J. 'Delta': a measure of stylistic difference and a guide to likely authorship.
+    *Literary and Linguistic Computing* 17, 267–287 (2002).
+19. Smith, P. W. H. & Aldridge, W. Improving authorship attribution: optimizing Burrows' Delta method.
+    *Journal of Quantitative Linguistics* 18, 63–88 (2011). Source of Cosine Delta.
+20. Eder, M. Visualization in stylometry: cluster analysis using networks. *Digital Scholarship in the
+    Humanities* 32, 50–64 (2017). Source of the consensus network.
