@@ -575,24 +575,27 @@ OLD_MEASURES = {   # config key in [lexical.old] -> (new measure key, label, dec
 def render_old_new(config: dict, results: dict) -> list[str]:
     cfg, ids, old = config["lexical"], list(results), config["lexical"]["old"]
     L = ["", "## Old versus new", "",
-         "Old: bar labels of Figures 1–5 of Final Report 3, rounded as printed there (no old CSV survives). "
-         "The old values used the old cleaning (ё deleted, hyphenated words fused, OCR splits unrepaired) and "
+         f"Old: exact values from the old result CSVs ({old['source']}); *figure label* = the bar label of Figures 1–5 of "
+         "Final Report 3. The old values used the old cleaning (ё deleted, hyphenated words fused, OCR splits unrepaired) and "
          "pymorphy2 lemmas of that text.", ""]
     for key, (new_key, label, d, basis) in OLD_MEASURES.items():
         L += [f"### {label} (old basis: {basis})", "",
-              "| Text | Old | New, all: whole | New, all: equal length | New, content: whole | New, content: equal length |",
-              "|---|---|---|---|---|---|"]
-        for t in ids:
+              "| Text | Old (exact) | Figure label | New, all: whole | New, all: equal length | New, content: whole | "
+              "New, content: equal length |",
+              "|---|---|---|---|---|---|---|"]
+        for i, t in enumerate(ids):
             a, c = results[t]["views"]["all"], results[t]["views"]["content"]
-            L.append(f"| {t} | {old[key][t]} | {f(a['whole'][new_key], d)} | "
+            L.append(f"| {t} | {f(old[key][t], d + 2)} | {old['figure_labels'][key][i]} | {f(a['whole'][new_key], d)} | "
                      f"{f(summarize_samples(a, new_key, cfg)['nonoverlapping_mean'], d)} | {f(c['whole'][new_key], d)} | "
                      f"{f(summarize_samples(c, new_key, cfg)['nonoverlapping_mean'], d)} |")
         L.append("")
     L += ["### Average sentence length (old: NLTK sentences of the raw text, every NLTK token counted, punctuation included)", "",
-          "| Text | Old | New: mean words per sentence | New: words + punctuation per sentence |", "|---|---|---|---|"]
-    for t in ids:
+          "| Text | Old (exact) | Figure label | New: mean words per sentence | New: words + punctuation per sentence |",
+          "|---|---|---|---|---|"]
+    for i, t in enumerate(ids):
         s = results[t]["sentences"]
-        L.append(f"| {t} | {old['sentence_length'][t]} | {s['whole']['mean']:.2f} | {s['counts']['words_punct_per_sentence']:.2f} |")
+        L.append(f"| {t} | {old['sentence_length'][t]:.4f} | {old['figure_labels']['sentence_length'][i]} | "
+                 f"{s['whole']['mean']:.2f} | {s['counts']['words_punct_per_sentence']:.2f} |")
     return L
 
 

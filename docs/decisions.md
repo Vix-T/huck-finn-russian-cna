@@ -228,7 +228,7 @@ Plan: `docs/plan/classic_metrics.md`. Implemented in `src/huckfinn_cna/lexical.p
     Their bootstrap is still computed and tabulated as a diagnostic.
 36. **Old values.** No `stylometric_summary.csv` or `lexical_diversity_results.csv` exists in the old
     repository (tag report-v3); old values are the bar labels of Figures 1–5 of Final Report 3,
-    checked against the images embedded in the PDF, stored in config `[lexical.old]`.
+    checked against the images embedded in the PDF, stored in config `[lexical.old]`. *Superseded by 46.*
 37. **Hyphen-fusion sensitivity** (carried over from 4.7). Each hyphenated word token replaced by its
     lowercased surface form with the hyphen deleted, unlemmatized; whole texts recomputed.
 38. **Sequential run in the sandbox.** `ProcessPoolExecutor` cannot create semaphores inside the
@@ -271,3 +271,12 @@ Plan: `docs/plan/betweenness.md`. Implemented in `src/huckfinn_cna/centrality.py
 45. **Figure 12 layout.** As the old script: union of each text's top 20, sorted by mean rank (absent
     word counted as rank 1000), first 30 words; greyscale, rank 1 black; colour scale capped at 100,
     cells show the actual rank.
+
+## Old local folder (2026-10-27)
+
+46. **Exact old values for the classic measures.** The old repository folder was replaced by a full copy
+    of the old local working folder (inventory: `docs/audit/data_audit.md`), which has the old result
+    CSVs. Config `[lexical.old]` now holds the exact values from `lexical_diversity_results.csv` (K, W)
+    and `stylometric_summary.csv` (chunked TTR, sentence length, unigram entropy); the figure-label
+    readings are kept as `figure_labels`. Every exact value recomputes from the old lemmatized files with
+    the old formulas and rounds to its figure label, so no reading differed.

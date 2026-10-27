@@ -334,15 +334,19 @@ windows_stream = 1
 quantile_method = "linear"      # numpy quantile method for median, IQR and percentile intervals
 workers = 1                     # processes (one text each); 1 = sequential. Results do not depend on it (seeds are per text)
 
-# Old values (Final Report 3). No stylometric_summary.csv or lexical_diversity_results.csv exists in
-# the old repository (tag report-v3), so the values are the bar labels of Figures 1-5, at the
-# precision printed there (checked against the images embedded in the PDF).
+# Old values (Final Report 3), exact, from the old local folder's result CSVs (read-only; see the inventory in
+# docs/audit/data_audit.md): yule_k, honore from lexical_diversity_results.csv; msttr (chunked_ttr), sentence_length
+# (avg_sentence_length) and entropy (unigram_entropy) from stylometric_summary.csv. Each recomputes exactly from the
+# old lemmatized files with the old formulas, and rounds to the bar labels of Figures 1-5.
 [lexical.old]
-yule_k = { Ru1 = 13.3, Ru2 = 20.3, Ru3 = 18.0, Ru4 = 24.9, Ru5 = 23.2 }
-honore = { Ru1 = 1955.2, Ru2 = 2060.3, Ru3 = 1962.9, Ru4 = 1963.8, Ru5 = 1943.3 }
-msttr = { Ru1 = 0.552, Ru2 = 0.520, Ru3 = 0.519, Ru4 = 0.498, Ru5 = 0.485 }
-sentence_length = { Ru1 = 18.6, Ru2 = 17.0, Ru3 = 15.0, Ru4 = 20.0, Ru5 = 19.2 }
-entropy = { Ru1 = 9.949, Ru2 = 9.516, Ru3 = 9.622, Ru4 = 9.326, Ru5 = 9.362 }
+source = "lexical_diversity_results.csv, stylometric_summary.csv (old local folder, 2025-10-10)"
+yule_k = { Ru1 = 13.317840789986276, Ru2 = 20.294620759396, Ru3 = 17.997197941376236, Ru4 = 24.88128539679687, Ru5 = 23.23676691575819 }
+honore = { Ru1 = 1955.170506053911, Ru2 = 2060.2956305598677, Ru3 = 1962.9377831430002, Ru4 = 1963.7550741022717, Ru5 = 1943.3096287519809 }
+msttr = { Ru1 = 0.551588245, Ru2 = 0.519576923, Ru3 = 0.519237264, Ru4 = 0.497833333, Ru5 = 0.485270833 }
+sentence_length = { Ru1 = 18.62309224, Ru2 = 17.02145923, Ru3 = 14.98172914, Ru4 = 19.96419882, Ru5 = 19.16898378 }
+entropy = { Ru1 = 9.949171773, Ru2 = 9.516044913, Ru3 = 9.622357432, Ru4 = 9.325949444, Ru5 = 9.362473047 }
+# Figure-label readings used before the CSVs were found (all equal the CSV values rounded to the label precision).
+figure_labels = { yule_k = [13.3, 20.3, 18.0, 24.9, 23.2], honore = [1955.2, 2060.3, 1962.9, 1963.8, 1943.3], msttr = [0.552, 0.520, 0.519, 0.498, 0.485], sentence_length = [18.6, 17.0, 15.0, 20.0, 19.2], entropy = [9.949, 9.516, 9.622, 9.326, 9.362] }
 
 # --- Betweenness centrality (centrality.py) ----------------------------------------------
 

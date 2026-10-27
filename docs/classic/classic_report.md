@@ -201,57 +201,57 @@ Bridge to the old definition (same sentences): mean tokens per sentence with pun
 
 ## Old versus new
 
-Old: bar labels of Figures 1–5 of Final Report 3, rounded as printed there (no old CSV survives). The old values used the old cleaning (ё deleted, hyphenated words fused, OCR splits unrepaired) and pymorphy2 lemmas of that text.
+Old: exact values from the old result CSVs (lexical_diversity_results.csv, stylometric_summary.csv (old local folder, 2025-10-10)); *figure label* = the bar label of Figures 1–5 of Final Report 3. The old values used the old cleaning (ё deleted, hyphenated words fused, OCR splits unrepaired) and pymorphy2 lemmas of that text.
 
 ### Yule's K (old basis: lemmas, stop words removed)
 
-| Text | Old | New, all: whole | New, all: equal length | New, content: whole | New, content: equal length |
-|---|---|---|---|---|---|
-| Ru1 | 13.3 | 61.58 | 62.22 | 11.10 | 11.81 |
-| Ru2 | 20.3 | 77.22 | 77.11 | 16.68 | 16.61 |
-| Ru3 | 18.0 | 72.03 | 72.62 | 15.20 | 15.66 |
-| Ru4 | 24.9 | 100.97 | 94.70 | 20.68 | 17.89 |
-| Ru5 | 23.2 | 86.37 | 83.32 | 20.79 | 18.29 |
+| Text | Old (exact) | Figure label | New, all: whole | New, all: equal length | New, content: whole | New, content: equal length |
+|---|---|---|---|---|---|---|
+| Ru1 | 13.3178 | 13.3 | 61.58 | 62.22 | 11.10 | 11.81 |
+| Ru2 | 20.2946 | 20.3 | 77.22 | 77.11 | 16.68 | 16.61 |
+| Ru3 | 17.9972 | 18.0 | 72.03 | 72.62 | 15.20 | 15.66 |
+| Ru4 | 24.8813 | 24.9 | 100.97 | 94.70 | 20.68 | 17.89 |
+| Ru5 | 23.2368 | 23.2 | 86.37 | 83.32 | 20.79 | 18.29 |
 
 ### Honoré's R (old label "W") (old basis: lemmas, stop words removed)
 
-| Text | Old | New, all: whole | New, all: equal length | New, content: whole | New, content: equal length |
-|---|---|---|---|---|---|
-| Ru1 | 1955.2 | 2,090.3 | 2,121.1 | 2,008.8 | 2,079.1 |
-| Ru2 | 2060.3 | 2,085.4 | 2,080.9 | 2,005.5 | 2,003.3 |
-| Ru3 | 1962.9 | 2,106.4 | 2,106.2 | 2,027.6 | 2,043.4 |
-| Ru4 | 1963.8 | 2,145.7 | 2,154.7 | 2,049.8 | 2,077.3 |
-| Ru5 | 1943.3 | 2,129.1 | 2,111.8 | 2,033.4 | 2,036.7 |
+| Text | Old (exact) | Figure label | New, all: whole | New, all: equal length | New, content: whole | New, content: equal length |
+|---|---|---|---|---|---|---|
+| Ru1 | 1,955.171 | 1955.2 | 2,090.3 | 2,121.1 | 2,008.8 | 2,079.1 |
+| Ru2 | 2,060.296 | 2060.3 | 2,085.4 | 2,080.9 | 2,005.5 | 2,003.3 |
+| Ru3 | 1,962.938 | 1962.9 | 2,106.4 | 2,106.2 | 2,027.6 | 2,043.4 |
+| Ru4 | 1,963.755 | 1963.8 | 2,145.7 | 2,154.7 | 2,049.8 | 2,077.3 |
+| Ru5 | 1,943.310 | 1943.3 | 2,129.1 | 2,111.8 | 2,033.4 | 2,036.7 |
 
 ### Chunked TTR (MSTTR) (old basis: lemmas, stop words removed)
 
-| Text | Old | New, all: whole | New, all: equal length | New, content: whole | New, content: equal length |
-|---|---|---|---|---|---|
-| Ru1 | 0.552 | 0.397 | 0.399 | 0.547 | 0.557 |
-| Ru2 | 0.52 | 0.367 | 0.367 | 0.502 | 0.510 |
-| Ru3 | 0.519 | 0.373 | 0.372 | 0.506 | 0.515 |
-| Ru4 | 0.498 | 0.346 | 0.358 | 0.488 | 0.507 |
-| Ru5 | 0.485 | 0.339 | 0.353 | 0.472 | 0.495 |
+| Text | Old (exact) | Figure label | New, all: whole | New, all: equal length | New, content: whole | New, content: equal length |
+|---|---|---|---|---|---|---|
+| Ru1 | 0.55159 | 0.552 | 0.397 | 0.399 | 0.547 | 0.557 |
+| Ru2 | 0.51958 | 0.52 | 0.367 | 0.367 | 0.502 | 0.510 |
+| Ru3 | 0.51924 | 0.519 | 0.373 | 0.372 | 0.506 | 0.515 |
+| Ru4 | 0.49783 | 0.498 | 0.346 | 0.358 | 0.488 | 0.507 |
+| Ru5 | 0.48527 | 0.485 | 0.339 | 0.353 | 0.472 | 0.495 |
 
 ### Unigram entropy (old basis: lemmas, stop words kept)
 
-| Text | Old | New, all: whole | New, all: equal length | New, content: whole | New, content: equal length |
-|---|---|---|---|---|---|
-| Ru1 | 9.949 | 9.944 | 9.794 | 11.420 | 11.130 |
-| Ru2 | 9.516 | 9.470 | 9.472 | 10.815 | 10.811 |
-| Ru3 | 9.622 | 9.619 | 9.572 | 10.987 | 10.868 |
-| Ru4 | 9.326 | 9.328 | 9.351 | 10.888 | 10.793 |
-| Ru5 | 9.362 | 9.349 | 9.373 | 10.788 | 10.706 |
+| Text | Old (exact) | Figure label | New, all: whole | New, all: equal length | New, content: whole | New, content: equal length |
+|---|---|---|---|---|---|---|
+| Ru1 | 9.94917 | 9.949 | 9.944 | 9.794 | 11.420 | 11.130 |
+| Ru2 | 9.51604 | 9.516 | 9.470 | 9.472 | 10.815 | 10.811 |
+| Ru3 | 9.62236 | 9.622 | 9.619 | 9.572 | 10.987 | 10.868 |
+| Ru4 | 9.32595 | 9.326 | 9.328 | 9.351 | 10.888 | 10.793 |
+| Ru5 | 9.36247 | 9.362 | 9.349 | 9.373 | 10.788 | 10.706 |
 
 ### Average sentence length (old: NLTK sentences of the raw text, every NLTK token counted, punctuation included)
 
-| Text | Old | New: mean words per sentence | New: words + punctuation per sentence |
-|---|---|---|---|
-| Ru1 | 18.6 | 14.28 | 17.43 |
-| Ru2 | 17.0 | 12.63 | 15.75 |
-| Ru3 | 15.0 | 11.28 | 14.23 |
-| Ru4 | 20.0 | 14.54 | 18.22 |
-| Ru5 | 19.2 | 13.92 | 17.47 |
+| Text | Old (exact) | Figure label | New: mean words per sentence | New: words + punctuation per sentence |
+|---|---|---|---|---|
+| Ru1 | 18.6231 | 18.6 | 14.28 | 17.43 |
+| Ru2 | 17.0215 | 17.0 | 12.63 | 15.75 |
+| Ru3 | 14.9817 | 15.0 | 11.28 | 14.23 |
+| Ru4 | 19.9642 | 20.0 | 14.54 | 18.22 |
+| Ru5 | 19.1690 | 19.2 | 13.92 | 17.47 |
 
 ## Diagnostic: paragraph bootstrap of the lexical measures
 

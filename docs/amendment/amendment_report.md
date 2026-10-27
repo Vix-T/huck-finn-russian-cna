@@ -765,19 +765,19 @@ all words, every other measure keeps its order. With content words only, entropy
 and Ru-1949. We cannot say why the old R ranked Ru-1926 first. It is not
 reproduced on the new text in either view.
 
-**(c) Sentence length.** Without punctuation, mean sentence length falls by 3.7–5.5 words in every
+**(c) Sentence length.** Without punctuation, mean sentence length falls by 3.7–5.4 words in every
 translation, and the ranking changes at the top:
 
 | Translation | Old (NLTK, raw text, punctuation counted) | New: words per sentence [95% CI] | New: words + punctuation | Median | Punctuation per 1,000 words [95% CI] |
 |---|---|---|---|---|---|
-| Ru-1911-Engelgardt | 18.6 | 14.28 [13.98, 14.63] | 17.43 | 12 | 221 [218, 225] |
-| Ru-1926-Anon | 17.0 | 12.63 [12.23, 13.06] | 15.75 | 10 | 248 [242, 254] |
-| Ru-1933-Chukovsky-(Ed.) | 15.0 | 11.28 [10.98, 11.59] | 14.23 | 9 | 262 [257, 267] |
-| Ru-1949-Braude | 20.0 | 14.54 [14.08, 15.00] | 18.22 | 10 | 254 [250, 258] |
-| Ru-1960-Daruzes | 19.2 | 13.92 [13.51, 14.29] | 17.47 | 10 | 256 [252, 260] |
+| Ru-1911-Engelgardt | 18.62 | 14.28 [13.98, 14.63] | 17.43 | 12 | 221 [218, 225] |
+| Ru-1926-Anon | 17.02 | 12.63 [12.23, 13.06] | 15.75 | 10 | 248 [242, 254] |
+| Ru-1933-Chukovsky-(Ed.) | 14.98 | 11.28 [10.98, 11.59] | 14.23 | 9 | 262 [257, 267] |
+| Ru-1949-Braude | 19.96 | 14.54 [14.08, 15.00] | 18.22 | 10 | 254 [250, 258] |
+| Ru-1960-Daruzes | 19.17 | 13.92 [13.51, 14.29] | 17.47 | 10 | 256 [252, 260] |
 
 Most of the fall, about 3 words per sentence, is punctuation: counting punctuation on the same
-Stanza sentences gives 14.2–18.2. The rest, 0.8–1.8 words, comes from the new sentence splitter and
+Stanza sentences gives 14.2–18.2. The rest, 0.8–1.7 words, comes from the new sentence splitter and
 the cleaning. The old order was Braude > Daruzes > Engel'gardt > Anon > Chukovsky. The new order is
 Braude > Engel'gardt > Daruzes > Anon > Chukovsky. The 95% intervals of the first three overlap, so
 they cannot be told apart, and Braude and Daruzes no longer stand out as having the longest
@@ -785,34 +785,36 @@ sentences. The abridged translations remain clearly shorter, and distinct from e
 punctuates least (221 marks per 1,000 words, against 248–262), so counting punctuation had understated
 his sentences relative to the others. His median sentence (12 words) is the longest of the five.
 
-**Old versus new.** The old values are the bar labels of Figures 1–5, rounded as printed there. No
-`stylometric_summary.csv` or `lexical_diversity_results.csv` survives in the old repository. The
-article text gives some of them as approximate ("approx. 0.498", "~19–20 words"). The figure labels
-fix them to the printed precision. Old K, R and MSTTR used lemmas without stop words, so the
+**Old versus new.** The old values are exact, taken from the old result files
+`lexical_diversity_results.csv` and `stylometric_summary.csv`. These were found in the copy of the old
+local working folder (data audit, "Old local folder inventory"). Each recomputes exactly from the old
+lemmatized texts with the old formulas. All of them round to the bar labels of Figures 1–5, so no
+figure-label reading used earlier differs. The article text gives some of them as approximate
+("approx. 0.498", "~19–20 words"). Old K, R and MSTTR used lemmas without stop words, so the
 content-word view is the closer comparison. Old entropy kept stop words, so the all-words view is.
 
 | Measure | Translation | Old | New, all words: whole | New, all words: 48,000 words | New, content words: whole |
 |---|---|---|---|---|---|
-| Yule's K (lower = richer) | Ru-1911 | 13.3 | 61.6 | 62.2 | 11.1 |
-| | Ru-1926 | 20.3 | 77.2 | 77.1 | 16.7 |
-| | Ru-1933 | 18.0 | 72.0 | 72.6 | 15.2 |
-| | Ru-1949 | 24.9 | 101.0 | 94.7 | 20.7 |
-| | Ru-1960 | 23.2 | 86.4 | 83.3 | 20.8 |
-| Honoré's R (old "W") | Ru-1911 | 1955.2 | 2090 | 2121 | 2009 |
-| | Ru-1926 | 2060.3 | 2085 | 2081 | 2006 |
-| | Ru-1933 | 1962.9 | 2106 | 2106 | 2028 |
-| | Ru-1949 | 1963.8 | 2146 | 2155 | 2050 |
-| | Ru-1960 | 1943.3 | 2129 | 2112 | 2033 |
-| MSTTR (chunked TTR) | Ru-1911 | 0.552 | 0.397 | 0.399 | 0.547 |
-| | Ru-1926 | 0.520 | 0.367 | 0.367 | 0.502 |
-| | Ru-1933 | 0.519 | 0.373 | 0.372 | 0.506 |
-| | Ru-1949 | 0.498 | 0.346 | 0.358 | 0.488 |
-| | Ru-1960 | 0.485 | 0.339 | 0.353 | 0.472 |
-| Unigram entropy (bits) | Ru-1911 | 9.949 | 9.944 | 9.794 | 11.420 |
-| | Ru-1926 | 9.516 | 9.470 | 9.472 | 10.815 |
-| | Ru-1933 | 9.622 | 9.619 | 9.572 | 10.987 |
-| | Ru-1949 | 9.326 | 9.328 | 9.351 | 10.888 |
-| | Ru-1960 | 9.362 | 9.349 | 9.373 | 10.788 |
+| Yule's K (lower = richer) | Ru-1911 | 13.318 | 61.6 | 62.2 | 11.1 |
+| | Ru-1926 | 20.295 | 77.2 | 77.1 | 16.7 |
+| | Ru-1933 | 17.997 | 72.0 | 72.6 | 15.2 |
+| | Ru-1949 | 24.881 | 101.0 | 94.7 | 20.7 |
+| | Ru-1960 | 23.237 | 86.4 | 83.3 | 20.8 |
+| Honoré's R (old "W") | Ru-1911 | 1955.17 | 2090 | 2121 | 2009 |
+| | Ru-1926 | 2060.30 | 2085 | 2081 | 2006 |
+| | Ru-1933 | 1962.94 | 2106 | 2106 | 2028 |
+| | Ru-1949 | 1963.76 | 2146 | 2155 | 2050 |
+| | Ru-1960 | 1943.31 | 2129 | 2112 | 2033 |
+| MSTTR (chunked TTR) | Ru-1911 | 0.5516 | 0.397 | 0.399 | 0.547 |
+| | Ru-1926 | 0.5196 | 0.367 | 0.367 | 0.502 |
+| | Ru-1933 | 0.5192 | 0.373 | 0.372 | 0.506 |
+| | Ru-1949 | 0.4978 | 0.346 | 0.358 | 0.488 |
+| | Ru-1960 | 0.4853 | 0.339 | 0.353 | 0.472 |
+| Unigram entropy (bits) | Ru-1911 | 9.9492 | 9.944 | 9.794 | 11.420 |
+| | Ru-1926 | 9.5160 | 9.470 | 9.472 | 10.815 |
+| | Ru-1933 | 9.6224 | 9.619 | 9.572 | 10.987 |
+| | Ru-1949 | 9.3259 | 9.328 | 9.351 | 10.888 |
+| | Ru-1960 | 9.3625 | 9.349 | 9.373 | 10.788 |
 
 Keeping stop words raises K about fivefold and lowers MSTTR by about 0.15, because function words are
 few and frequent. The content-word values are close to the old ones, and the order of the five is
