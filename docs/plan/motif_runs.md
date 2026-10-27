@@ -1,5 +1,21 @@
 # Plan: motif runs (agreed 2026-10-22)
 
+> **Run in progress: final mfinder run, R = 1000, all five texts in parallel.** Started from Terminal
+> by the project owner on Tue 27 Oct 2026 (pre-flight passed 16:31 PDT; the exact start time is in
+> `data/interim/mfinder/final/run_all_r1000.log`). Expected finish, for a 16:31 start (shift by any
+> delay): Ru2 Tue 27 Oct ~23:20, Ru3 Wed 28 Oct ~02:45, Ru5 Wed 28 Oct ~16:30–17:10, Ru4 Wed 28 Oct
+> ~22:10–23:20, **Ru1 (last) Thu 29 Oct ~02:15–03:50**. Progress: `scripts/mfinder_status.sh 1000`.
+> Do not modify anything in `data/interim/networks/` or `data/interim/mfinder/` until all five
+> have finished.
+>
+> Pre-flight (2026-10-27): working tree clean; networks match `docs/networks/checksums.txt`
+> (identical to `networks-v1`); mfinder binary SHA-256 `c0734777…8bb0` as in all five rehearsal
+> run logs; seeds in config = decision 29 = re-derived; no `*_r1000` folder; nothing written under
+> `data/interim/mfinder/` since 23 Oct; 813 GiB free (the run needs about 1.5 MB per text).
+> Estimates: real network plus 1,000 random networks at the rehearsal's five-way rate (upper bound),
+> and a best estimate letting each text speed up as others finish (Ru1 alone 1.92 min per random
+> network against 2.12 under five-way load).
+
 Items are done in order; item 4 is the final all-texts mfinder run.
 
 ## Item 1: Ru1 r=100 analysis
