@@ -64,15 +64,16 @@ libraries that agree on every value, with mfinder 1.2 kept as a cross-check, usi
 seed. The motif and centrality values are recomputed in the next stages. For this stage only the
 article's description of the network changes (Data Pipeline, §3.4).
 
-**Delta and clustering confirm two pairings but withdraw the spectral embedding.** With Burrows's
+**Delta and clustering confirm two pairings; the spectral embedding is rebuilt.** With Burrows's
 Cosine Delta over 40 settings, Braude–Daruzes and Anon–Chukovsky pair in every tree. But the 1926 and
 1933 texts share 30% of their eight-word sequences: the 1933 edition is largely a revision of the 1926
 text, so their closeness is not independent style. Engel'gardt is the most distant translation, and
 its 5,000-word passages are the only ones recognizable as one translator's. Passages of the other four
 match the same stretch of the story in another translation more than their own text. The spectral
-embedding of §3.3 was ill-conditioned in its old form. Rebuilt on a Gaussian affinity of Cosine Delta
-it is stable, but it repeats the MDS map, so it moves to an appendix; the main text uses a Delta tree
-and an MDS map (Figures 7–8). The old Figure 7 was a cosine similarity of
+embedding of §3.3 was ill-conditioned in its old form. It is rebuilt on a Gaussian kernel of the Delta
+distances, for whole texts and for passages, and is stable (Figure 8). The translations line up by
+date on its first axis, which with five texts is suggestive at most. The passages separate by
+translator along one axis and by story along the other. The old Figure 7 was a cosine similarity of
 raw counts, not Delta (Section 8).
 
 **Betweenness centrality withdraws the сказать/говорить finding.** The article reports that
@@ -126,7 +127,7 @@ five translations (Section 10).
 | Delta, Clustering and Embedding | Only Engel'gardt's 5,000-word blocks group by translation; others match by story position | Finding | §3.3 |
 | Delta, Clustering and Embedding | Anon–Chukovsky share 30% of 8-grams: textual dependence, not convergent style | Finding | §3.3; Data Pipeline |
 | Delta, Clustering and Embedding | Braude–Daruzes pairing holds in 40 of 40 trees | None | — |
-| Delta, Clustering and Embedding | Spectral embedding moved to an appendix (old version ill-conditioned; RBF version stable but repeats MDS/PCA); main-text map is MDS | Finding | §3.3, Figure 8 |
+| Delta, Clustering and Embedding | Spectral embedding rebuilt (Gaussian kernel on Cosine Delta, normalized Laplacian; texts and blocks); stable; MDS and PCA as appendix checks | Figure | §3.3, Figure 8 |
 | Delta, Clustering and Embedding | §3.5 agreement with Delta/spectral: Delta side partly holds; motif side pending | To be decided | §3.5 |
 | Betweenness Centrality | Old network described as "unlemmatized"; it was lemmatized, directed, across sentences, distance 1/count | Wording | §3.4.2 |
 | Betweenness Centrality | Exact unweighted undirected betweenness (directed and the old 1/count as checks); igraph = networkx | Numbers | §3.4.2, Figure 12 |
@@ -1004,8 +1005,9 @@ local folder, data audit "Old local folder inventory"):
   L2-normalized Euclidean distances) as checks. A majority-rule consensus tree and an Eder-style
   consensus network over the 40 settings.
 - **Block-level checks:** nearest neighbours and silhouette.
-- **Embeddings:** PCA of the blocks, classical MDS of the texts, and spectral embedding as an
-  appendix check.
+- **Embedding:** spectral embedding of the Cosine Delta distances (Gaussian kernel, σ = median
+  distance, symmetric normalized Laplacian) at text and block level, for the main text. Classical
+  MDS of the texts and PCA of the blocks serve as robustness checks in the appendix.
 
 ### 8.2 Why
 
@@ -1050,30 +1052,27 @@ with Engel'gardt's position unresolved. The consensus network gives the two pair
 (80 of 80). Engel'gardt's strongest links are to Anon (48) and Chukovsky (38), and its weakest to
 Daruzes (2).
 
-**PCA of blocks.** No component mainly separates abridged from full texts: the abridged/full grouping
+**PCA of blocks (appendix robustness check).** No component mainly separates abridged from full texts: the abridged/full grouping
 explains at most 21% of any component's variance. PC1 (19% of variance at 100 MFW, 12% at 300, 8% at
 1,000) is the main translation axis (η² = 0.78–0.92; the only other component above 0.5 is PC4 at 100 MFW, 0.55). It runs from Engel'gardt through the abridged
 pair to Braude and Daruzes, from bookish words (затем, однако, свой, себя, в, образ) to colloquial
 ones (да, вот, ну, сказать, говорить). PC2 and PC3 are story axes: the river (река, берег, плыть)
 against the Phelps farm (Салли, Том), and the king and duke (король, герцог).
 
-**Classical MDS** (Figure 8 replacement): dimension 1 (58%) orders Engel'gardt → Anon/Chukovsky →
-Braude/Daruzes; dimension 2 (30%) separates Engel'gardt and the abridged pair.
+**Spectral embedding (replacement Figure 8).** The new Figure 8 is a spectral embedding built on the
+Delta distances, at two levels: the five translations and the 79 blocks.
 
-**Spectral embedding: a properly built version is stable, but it repeats MDS and PCA, so it belongs
-in the appendix.** Two constructions were tested.
+*Construction.* Spectral embedding needs a similarity (affinity) matrix W with no negative entries.
+We convert each Cosine Delta distance d into a similarity with a Gaussian kernel,
+w = exp(−d² / (2σ²)), with σ set to the median pairwise distance at that level (1.226 for the
+translations, 1.045 for the blocks, at the primary setting: all words, 300 MFW, culling 0%). Every
+similarity is positive, so the graph is connected. D is the diagonal degree matrix (row sums of W).
+The embedding uses the symmetric normalized Laplacian L = I − D^−1/2 W D^−1/2, a rescaled form of
+D − W. Its smallest eigenvalue is 0. The eigenvectors of the next two (λ2, λ3), rescaled by D^−1/2,
+are the coordinates (scikit-learn `spectral_embedding`, `norm_laplacian=True`).
 
-*Cosine affinity with negatives set to 0 (dropped).* On the new features most cosine similarities
-between whole texts are negative: 8 of 10 pairs at every grid setting. Clipped to 0, they leave three
-disconnected components ({Engel'gardt}, {Anon, Chukovsky}, {Braude, Daruzes}). The normalized
-Laplacian then has λ1 = λ2 = λ3 = 0, so the layout is not unique and changes with `random_state`.
-The old TF-IDF version was connected but nearly complete (all affinities ≥ 0.948), with λ2–λ5 = 1.243,
-1.248, 1.254 and 1.255 within 0.012 of each other, so its second axis rested on a near-tie
-(λ3 − λ2 = 0.005).
-
-*Gaussian (RBF) affinity on Cosine Delta (kept for the appendix).* W = exp(−d²/(2σ²)) with σ = the
-median pairwise distance, and 0.5 and 2 times it, at the primary setting. Every affinity is positive,
-so the graph is connected at both levels.
+*Stability.* Each embedding was repeated with σ at half and twice the median, and with different
+random starts.
 
 | | σ factor | λ2 | λ3 | λ4 | λ3 − λ2 | λ4 − λ3 |
 |---|---|---|---|---|---|---|
@@ -1084,27 +1083,48 @@ so the graph is connected at both levels.
 | | × 1 | 0.916 | 0.947 | 0.975 | 0.031 | 0.028 |
 | | × 2 | 0.989 | 0.997 | 1.004 | 0.008 | 0.007 |
 
-- **Stability.** The layouts do not depend on `random_state` (Procrustes disparity < 10⁻²⁵) and
-  barely on σ: the largest disparity between σ values is 0.042 for texts and 0.009 for blocks. The
-  eigenvalue gaps shrink as σ grows (with a very wide kernel every affinity tends to 1). At σ × 2 the
-  block-level λ2 and λ3 differ by 0.008, so the order of the two components is fragile, but the plane
-  they span is not.
-- **Text level: what the axes separate.** Component 1 orders the five translations exactly by date of
-  publication (Spearman ρ = +1.00 at every σ): Engel'gardt, Anon, Chukovsky, Braude, Daruzes.
-  Component 2 sets Engel'gardt apart. The layout is nearly the same as the MDS map (Procrustes
-  disparity 0.028 at the median σ).
-- **Block level: what the axes separate.** Component 1 is a translation axis (η² = 0.88–0.89; 0.56–0.61
-  even without Engel'gardt's blocks). It runs from Engel'gardt through Anon and Chukovsky to Braude
-  and Daruzes. Component 2 is the story (r = −0.70 with story position). Neither separates abridged
-  from full texts (η² ≤ 0.06). In the plot, Engel'gardt's blocks form a group of their own, while the
-  other four translations interleave along one arc ordered by story position. The layout is nearly
-  the PCA plane of the same features (PC1 × PC2, disparity 0.016).
+- The layout does not depend on the random start (Procrustes disparity < 10⁻²⁵).
+- It barely depends on σ: the largest Procrustes disparity between the three σ values is 0.042 for
+  the translations and 0.009 for the blocks (0 = identical up to shift, scale, rotation and
+  reflection).
+- The eigenvalue gaps narrow as σ grows, because with a very wide kernel all similarities approach 1.
+  At twice the median, block-level λ2 and λ3 differ by only 0.008, so which of the two axes comes
+  first could swap under small changes to the data. The plane they span is stable. Figure 8 uses the
+  median, where the gaps are 0.13 (texts) and 0.03 (blocks).
+- The layouts agree with the two robustness checks in the appendix: the classical MDS map of the same
+  distances (Procrustes disparity 0.028 at text level) and the PCA plane of the same block features
+  (0.016).
 
-So a properly constructed spectral embedding is stable and agrees with the other methods. But at text
-level it repeats the MDS map, and at block level it repeats PCA, both of which are simpler to explain.
-**Recommendation:** keep the RBF spectral embedding in the appendix, at both levels, as a robustness
-check that a neighbourhood-based method gives the same picture. Keep MDS and the consensus tree in
-the main text, and drop the clipped-cosine version and the old TF-IDF Figure 8.
+*Translations (left panel).* Component 2 sets Engel'gardt apart from the other four. Component 1
+places the translations in order of publication: Engel'gardt, Anon, Chukovsky, Braude, Daruzes
+(Spearman ρ = +1.00 at every σ). This should be read cautiously. With five texts, a perfect ordering in
+either direction arises by chance once in 60 random arrangements. But two pairs (Anon–Chukovsky,
+Braude–Daruzes) are each other's nearest neighbours for other reasons, Anon and Chukovsky sharing much
+of their wording. The ordering is then essentially three groups in date order, which chance would give
+one time in three. It is consistent with a change in style over time, matching the colloquial-versus-
+bookish axis of the block PCA, but it does not establish one.
+
+*Blocks (right panel).* Component 1 separates the translations (η² = 0.88; 0.61 without Engel'gardt's
+blocks), running from Engel'gardt through Anon and Chukovsky to Braude and Daruzes. Component 2 follows
+the story (r = −0.70 with a block's position in the novel). Neither separates abridged from full texts
+(η² ≤ 0.06). Engel'gardt's blocks form a group of their own. The blocks of the other four
+translations interleave along one arc ordered by story position, as the nearest-neighbour analysis
+above showed. In this two-dimensional view 62% of blocks have a nearest neighbour from their own
+translation, against 32% in the full Delta space, because the projection keeps only one of the many
+story directions.
+
+*Constructions not used.* Cosine similarity of the z-scored profiles with negative values set to 0 is
+negative for 8 of the 10 text pairs at every setting. The graph then falls apart into three components
+({Engel'gardt}, {Anon, Chukovsky}, {Braude, Daruzes}), λ1 = λ2 = λ3 = 0, and the layout is not unique.
+The old TF-IDF version was connected but nearly complete (all similarities ≥ 0.948). Its λ2–λ5
+(1.243, 1.248, 1.254, 1.255) lie within 0.012 of each other, so its second axis rested on a near-tie
+(λ3 − λ2 = 0.005).
+
+**Robustness checks (appendix).** *Classical MDS* of the text-level Cosine Delta: dimension 1 (58%)
+orders Engel'gardt → Anon/Chukovsky → Braude/Daruzes; dimension 2 (30%) separates Engel'gardt and the
+abridged pair. This is the same arrangement as Figure 8's left panel. *PCA of the blocks* (300 MFW):
+PC1 (12.3%) is the translation axis and PC2 (9.1%) the story axis, the same plane as Figure 8's right
+panel (details under PCA above).
 
 **Figure 13 (appendix).** The top 30 content lemmas (Stanza tags; the old figure used an NLTK
 stop-word list) ranked within that set per translation. говорить ranks 1st in Braude and 2nd in
@@ -1113,7 +1133,7 @@ same frequency shift appears in Section 11.
 
 **§3.5's claim of agreement with "Delta Burrows and spectral embedding clustering."** On the Delta
 side, two groupings are robust: Braude–Daruzes and Anon–Chukovsky. The second reflects shared
-wording, not independent stylistic choice, and the spectral embedding only repeats the Delta picture. Whether
+wording, not independent stylistic choice; the spectral embedding shows the same groups. Whether
 the network motifs agree can be judged only when the final motif results are in (Section 10). Until
 then the sentence should not claim agreement.
 
@@ -1124,9 +1144,11 @@ then the sentence should not claim agreement.
 *Figure 7 (replacement): Cosine Delta between the translations (all words, 300 most frequent lemmas)
 and the average-linkage dendrogram.*
 
-![Figure 8 (replacement)](figures/fig8_mds_cosine_delta_greyscale.png)
+![Figure 8 (replacement)](figures/fig8_spectral_rbf_greyscale.png)
 
-*Figure 8 (replacement): Classical multidimensional scaling of the Cosine Delta distances.*
+*Figure 8 (replacement): Spectral embedding of the Cosine Delta distances (Gaussian kernel, σ = median
+distance; symmetric normalized Laplacian). Left: the five translations. Right: the 79 passages of 5,000
+words; marker = translation, shade = position in the story (light = beginning, dark = end).*
 
 ![Consensus tree](figures/delta_consensus_tree_greyscale.png)
 
@@ -1137,18 +1159,25 @@ Delta), with clade support.*
 
 *Consensus network over the same 40 settings (nearest neighbour weight 1, next two 0.5 each).*
 
-![Spectral embedding of the translations (appendix)](figures/spectral_rbf_texts_greyscale.png)
+Appendix (robustness checks):
 
-*Appendix: spectral embedding of the translations (RBF affinity on Cosine Delta, σ = 0.5, 1 and 2 times
-the median distance). Component 1 orders the translations by date.*
+![Classical MDS (appendix)](figures/appendix_mds_cosine_delta_greyscale.png)
 
-![Spectral embedding of blocks (appendix)](figures/spectral_rbf_blocks_greyscale.png)
+*Appendix: classical multidimensional scaling of the text-level Cosine Delta distances.*
 
-*Appendix: spectral embedding of the 79 blocks (marker = translation, shade = position in the story).
-Engel'gardt's blocks stand apart; the other translations interleave along the story.*
+![PCA of blocks (appendix)](figures/appendix_pca_blocks_greyscale.png)
+
+*Appendix: principal component analysis of the 79 blocks (standardized relative frequencies of the 300
+most frequent lemmas).*
+
+![Spectral embedding, σ sensitivity, translations (appendix)](figures/spectral_rbf_texts_greyscale.png)
+
+![Spectral embedding, σ sensitivity, blocks (appendix)](figures/spectral_rbf_blocks_greyscale.png)
+
+*Appendix: Figure 8 repeated with σ at 0.5, 1 and 2 times the median distance.*
 
 The degenerate clipped-cosine layout (`figures/appendix_spectral_embedding_greyscale.png`) is kept in
-the repository only to document why that construction fails.
+the repository only to document why that construction is not used.
 
 ![Figure 13 (replacement)](figures/fig13_mfw_content_rank_heatmap_greyscale.png)
 
@@ -1164,15 +1193,15 @@ the repository only to document why that construction fails.
 | Anon–Chukovsky | "Abridged pair" with similar style → shared wording (30% of 8-grams) | Textual dependence | Finding |
 | Braude–Daruzes pair | Holds (40 of 40 trees) | — | None |
 | Engel'gardt | Outlier → most distant, but grouped with the abridged pair under Cosine Delta | Distance-dependent | Wording |
-| Spectral embedding (§3.3, Figure 8) | Main 2-D map (TF-IDF, ill-conditioned) → appendix only, rebuilt on an RBF affinity of Cosine Delta: stable across σ and seeds, but it repeats MDS (texts) and PCA (blocks); main-text map is MDS | The old construction rests on a near-tie of eigenvalues; clipped cosine is degenerate | Finding (Figure 8 replaced by MDS; spectral moves to the appendix) |
+| Spectral embedding (§3.3, Figure 8) | TF-IDF of whole texts, L = D − W described (ill-conditioned: λ3 − λ2 = 0.005) → Gaussian kernel on Cosine Delta (σ = median), symmetric normalized Laplacian, texts and blocks; stable across σ and random starts; MDS and PCA as appendix checks | The old construction rests on a near-tie of eigenvalues; the kernel keeps the graph connected | Figure (Figure 8 replaced); Wording (§3.3 method description) |
 | PCA | Not reported → PC1 is a translation axis (colloquial vs bookish); no abridged/full component | — | Wording |
 | Figure 13 | NLTK stop list, pymorphy2 lemmas → Stanza content lemmas | Same units as the rest | Figure |
 | §3.5 agreement claim | Asserted → Delta side: two robust pairs, one reflecting shared wording; motif side pending | — | To be decided (Section 10) |
 
 ### 8.4 Suggested article text
 
-**§3.3.** Retitle "Delta Distance and Clustering". Replace the section, from "Spectral Embedding allows
-us to visualize …" to the paragraph after Figure 8, with:
+**§3.3.** Retitle "Delta Distance, Clustering and Spectral Embedding". Replace the section, from
+"Spectral Embedding allows us to visualize …" to the paragraph after Figure 8, with:
 
 > To compare the translations as wholes we used Burrows's Delta in its cosine form, the standard
 > distance for stylometric attribution. Each text was represented by the relative frequencies of its
@@ -1188,30 +1217,50 @@ us to visualize …" to the paragraph after Figure 8, with:
 > of their eight-word sequences, against at most 0.7% for any other pair, so the 1933 edition is in
 > large part a revision of the 1926 text rather than an independent translation. Engel'gardt is the
 > most distant translation from all others; whether it groups with the abridged texts or stands
-> alone depends on the distance used. A two-dimensional map of the distances (Figure 8) orders the
-> translations from Engel'gardt through the abridged texts to Braude and Daruzes.
+> alone depends on the distance used.
 >
-> At the level of 5,000-word passages, only Engel'gardt's text is consistently recognizable: for the
-> other four translations, a passage resembles the same passage of the story in another translation
-> more than other passages by its own translator. Comparisons between those four translations are
-> therefore made on whole texts only. A spectral embedding built from the same distances (Appendix)
-> gives the same picture: the translations line up by date, and the passages arrange themselves by
-> translation along one axis and by position in the story along the other.
-
-**Appendix.** Replace the spectral-embedding description in §3.3 (the Graph Laplacian passage, from
-"This method doesn't start with the raw data" to "… the third smallest become the Y-coordinates") with
-an appendix note:
-
-> As a check, we also embedded the translations and the 5,000-word passages with spectral embedding.
-> The similarity between two units is a Gaussian function of their Cosine Delta distance, which
-> keeps every pair connected; the embedding uses the eigenvectors of the symmetric normalized graph
-> Laplacian, dropping the first (constant) one. The layouts are stable across kernel widths and
-> random starts and agree with the MDS map and with a principal component analysis of the passages.
+> To visualize these relationships we used spectral embedding, a technique from spectral graph
+> theory that, unlike principal component analysis, focuses on preserving local neighbourhoods (which
+> texts sit close together) rather than the directions of greatest variance. It starts from a
+> similarity matrix W. Because Delta measures distance, we first convert each distance d into a
+> similarity with a Gaussian kernel, w = exp(−d²/2σ²), where σ is the median distance between the
+> units; similar texts get weights near 1, distant ones weights near 0, and every pair stays
+> connected. The degree matrix D holds the row sums of W on its diagonal: where W says how strongly
+> text A connects to text B, D says how strongly A connects to everything else combined. From these we
+> form the normalized graph Laplacian, L = I − D^−1/2 W D^−1/2, a version of D − W rescaled so that
+> texts with many strong connections do not dominate. The Laplacian is a tension map of the graph: its
+> eigenvectors with the smallest eigenvalues describe the cuts that break the fewest strong
+> connections. The smallest eigenvalue is always zero and belongs to a constant vector, which carries
+> no information and is discarded; the eigenvectors of the second and third smallest eigenvalues,
+> rescaled by D^−1/2, become the x- and y-coordinates of the map.
+>
+> We embedded both the five translations and the 79 passages (Figure 8). The maps are stable: they do
+> not change with the random start and barely change when σ is halved or doubled, and they agree with
+> a classical multidimensional scaling of the same distances and with a principal component analysis
+> of the passages (Appendix). In the map of the translations, Engel'gardt stands apart and the
+> translations line up in order of publication along the first axis. With only five texts, two of
+> which are near-duplicates, this ordering could easily arise by chance, so we read it as consistent
+> with a stylistic change over time rather than as evidence for one. The map of the passages shows
+> why the passage level matters: only Engel'gardt's passages form a group of their own. For the other
+> four translations, a passage sits nearest the same part of the story in another translation, and
+> the passages spread along the story on the second axis. Comparisons between those four translations
+> are therefore made on whole texts only.
 
 **Figure 7 caption:** "Cosine Delta between the translations (300 most frequent lemmas) and the
-resulting average-linkage tree." **Figure 8 caption:** "Classical multidimensional scaling of the
-Cosine Delta distances." In the table of visualizations, replace "Spectral Embedding 2D Plot" with
-"Delta distance map (MDS)".
+resulting average-linkage tree." **Figure 8 caption:** "Spectral embedding of the Cosine Delta
+distances. Left: the five translations. Right: 5,000-word passages, marked by translation and shaded
+by position in the story." In the table of visualizations, keep "Spectral Embedding 2D Plot" and
+describe it as "The stylistic distance between translations and between passages".
+
+**Appendix.** Add:
+
+> As robustness checks, we mapped the same Cosine Delta distances with classical multidimensional
+> scaling and analysed the 5,000-word passages with principal component analysis. Both give the same
+> arrangement as the spectral embedding (Figure 8): Engel'gardt apart, the 1926 and 1933 texts
+> together, Braude and Daruzes together. The principal components show a translation axis, running
+> from Engel'gardt's more bookish to Braude's and Daruzes's more colloquial vocabulary, and a story
+> axis. The spectral embedding was also repeated with the kernel width σ at half and twice the median
+> distance, with the same result.
 
 **§3.5.** Replace "and that there are patterns that agree with our Delta Burrows, and spectral
 embedding clustering of the translator's styles" with:

@@ -333,3 +333,13 @@ Plan: `docs/plan/delta_clustering.md`. Implemented in `src/huckfinn_cna/delta.py
     blocks; nearly identical to MDS (0.028) and PCA (0.016). Recommendation, adopted in Section 8: the
     RBF version stays in the appendix as a robustness check; the clipped-cosine version and the old
     TF-IDF Figure 8 are dropped; MDS is the main-text map.
+54. **RBF spectral embedding is the main-text Figure 8** (project owner's decision, 2026-10-27;
+    supersedes the appendix placement in 53). Replacement Figure 8 (`fig8_spectral_rbf_greyscale.png`):
+    Gaussian kernel exp(−d²/(2σ²)) on Cosine Delta at the primary setting, σ = median off-diagonal
+    distance (texts 1.226, blocks 1.045), symmetric normalized Laplacian, first eigenvector dropped,
+    next two rescaled by D^−1/2; left panel texts, right panel blocks (marker = translation, grey =
+    story position). Appendix robustness checks: classical MDS of the texts
+    (`appendix_mds_cosine_delta_greyscale.png`, formerly the replacement Figure 8), PCA of the blocks
+    (`appendix_pca_blocks_greyscale.png`), and the σ = 0.5/1/2 panels. The text-level publication order
+    is reported as consistent with, not evidence for, a trend over time (n = 5; with the two pairs it
+    is effectively three groups, ordered by chance one time in three).

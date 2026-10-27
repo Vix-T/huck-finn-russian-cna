@@ -182,7 +182,7 @@ Eigenvalues of −½ J D² J: 1.7650, 0.8964, 0.3274, 0.0474, -0.0000. Dimension
 | Ru4 | +0.6409 | +0.0377 |
 | Ru5 | +0.7304 | +0.2888 |
 
-## Spectral embedding (appendix)
+## Spectral embedding, clipped cosine affinity (not used: see the RBF section below)
 
 Text-level z-scores at the primary setting; affinity = cosine similarity with negatives set to 0; symmetric normalized Laplacian L = I − D^−1/2 W D^−1/2; the first eigenvector is dropped and the next two, rescaled by D^−1/2, are the coordinates (sklearn `spectral_embedding`, `norm_laplacian=True`, random_state 20261027).
 
@@ -231,7 +231,7 @@ Across the grid (view all): eigenvalues λ2, λ3, λ4, zero affinities, and each
 | 1000 | 0 | 0.0000 | 0.0000 | 2.0000 | 0.0000 | 8 | 3 | Ru1→Ru4, Ru2→Ru3, Ru3→Ru2, Ru4→Ru5, Ru5→Ru4 |
 | 1000 | 100 | 0.0000 | 0.0000 | 2.0000 | 0.0000 | 8 | 3 | Ru1→Ru2, Ru2→Ru3, Ru3→Ru2, Ru4→Ru5, Ru5→Ru4 |
 
-## Spectral embedding on an RBF affinity (Cosine Delta)
+## Spectral embedding on an RBF affinity of Cosine Delta (replacement Figure 8)
 
 W = exp(−d² / (2σ²)) on Cosine Delta at the primary setting (all words, 300 MFW, culling 0 %), σ = factor × median off-diagonal distance; symmetric normalized Laplacian, first eigenvector dropped, next two rescaled by D^−1/2 (sklearn `spectral_embedding`, random_state 20261027). Procrustes disparity: scipy (0 = identical up to translation, scale, rotation, reflection; 1 = unrelated).
 

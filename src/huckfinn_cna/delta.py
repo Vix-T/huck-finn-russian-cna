@@ -624,7 +624,7 @@ def tree_string(cl: set[frozenset[int]], texts: list[str]) -> str:
 def render_rbf(config: dict, res: dict) -> list[str]:
     cfg, texts = config["delta"], res["texts"]
     pr = cfg["primary"]
-    L = ["", "## Spectral embedding on an RBF affinity (Cosine Delta)", "",
+    L = ["", "## Spectral embedding on an RBF affinity of Cosine Delta (replacement Figure 8)", "",
          f"W = exp(−d² / (2σ²)) on Cosine Delta at the primary setting ({cfg['primary_view']} words, {pr['mfw']} MFW, culling "
          f"{pr['culling']} %), σ = factor × median off-diagonal distance; symmetric normalized Laplacian, first eigenvector dropped, "
          f"next two rescaled by D^−1/2 (sklearn `spectral_embedding`, random_state {cfg['spectral_random_state']}). Procrustes "
@@ -796,7 +796,7 @@ def render_report(config: dict, res: dict) -> str:
 
     # Spectral.
     sp = res["spectral"]
-    L += ["", "## Spectral embedding (appendix)", "",
+    L += ["", "## Spectral embedding, clipped cosine affinity (not used: see the RBF section below)", "",
           "Text-level z-scores at the primary setting; affinity = cosine similarity with negatives set to 0; symmetric "
           "normalized Laplacian L = I − D^−1/2 W D^−1/2; the first eigenvector is dropped and the next two, rescaled by "
           f"D^−1/2, are the coordinates (sklearn `spectral_embedding`, `norm_laplacian=True`, random_state {cfg['spectral_random_state']}).", "",
@@ -1012,6 +1012,76 @@ def consensus_network_figure(config: dict, edges: Counter, n_settings: int, text
     plt.close(fig)
 
 
+BLOCK_MARKERS = ["o", "s", "^", "D", "v", "P", "X"]
+
+
+def block_scatter(ax, xy: np.ndarray, block_labels: list[str], texts: list[str]):
+    """Blocks: marker = translation, fill = story position on a grey ramp (light = start, dark = end)."""
+    pos = relative_positions(block_labels)
+    sc = None
+    for t, m in zip(texts, BLOCK_MARKERS):
+        idx = np.array(block_labels) == t
+        sc = ax.scatter(xy[idx, 0], xy[idx, 1], c=pos[idx], cmap="Greys", vmin=-0.15, vmax=1.0, marker=m, s=70,
+                        edgecolors="black", linewidths=0.8)
+    return sc
+
+
+def block_legend(fig, config: dict, texts: list[str], sc, bottom: float = -0.02) -> None:
+    plt = _plt()
+    handles = [plt.Line2D([], [], marker=m, linestyle="", markerfacecolor="white", markeredgecolor="black", markersize=8)
+               for m in BLOCK_MARKERS[:len(texts)]]
+    fig.legend(handles, _labels(config, texts), loc="lower center", ncol=len(texts), frameon=False, fontsize=10,
+               bbox_to_anchor=(0.5, bottom))
+    cbar = fig.colorbar(sc, cax=fig.add_axes([0.905, 0.2, 0.01, 0.6]))
+    cbar.set_ticks([0, 0.25, 0.5, 0.75, 1])
+    cbar.ax.set_ylim(0, 1)
+    cbar.set_label("Story position (block centre as share of text; light = start, dark = end)")
+
+
+def fig8_spectral(config: dict, res: dict, path: Path) -> None:
+    """Replacement Figure 8: RBF spectral embedding at the reference sigma, texts (left) and blocks (right)."""
+    plt = _plt()
+    cfg, texts = config["delta"], res["texts"]
+    f = cfg["rbf_reference_factor"]
+    rt, rb = res["spectral_rbf"]["texts"]["factors"][f], res["spectral_rbf"]["blocks"]["factors"][f]
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(17, 7))
+    e = rt["embedding"]
+    ax1.scatter(e[:, 0], e[:, 1], s=150, color="black", alpha=0.75, edgecolor="grey")
+    for (x, y), lab in zip(e, _labels(config, texts)):
+        ax1.annotate(lab, (x, y), textcoords="offset points", xytext=(7, 7), fontsize=11)
+    ax1.margins(0.3)
+    ax1.set_title(f"Translations (σ = median distance {rt['sigma']:.3f})", fontsize=13)
+    sc = block_scatter(ax2, rb["embedding"], res["units"][cfg["primary_view"]]["block_text"], texts)
+    ax2.set_title(f"5,000-word blocks (σ = median distance {rb['sigma']:.3f})", fontsize=13)
+    for ax in (ax1, ax2):
+        ax.set_xlabel("Component 1", fontsize=12)
+        ax.set_ylabel("Component 2", fontsize=12)
+    fig.suptitle("Spectral Embedding of Russian Translations (Gaussian kernel on Cosine Delta, 300 MFW)", fontsize=16)
+    fig.subplots_adjust(bottom=0.17, top=0.86, wspace=0.22, right=0.88)
+    block_legend(fig, config, texts, sc)
+    fig.savefig(path, dpi=config["pos_check"]["figure_dpi"], bbox_inches="tight")
+    plt.close(fig)
+
+
+def pca_blocks_figure(config: dict, res: dict, path: Path) -> None:
+    """Appendix: PCA of the blocks at the primary MFW, PC1 x PC2, in the block style of Figure 8."""
+    plt = _plt()
+    cfg, texts = config["delta"], res["texts"]
+    feats = res["grid"]["features"][f"{cfg['primary_view']}|{cfg['primary']['mfw']}|{cfg['primary']['culling']}"]
+    model, scores = pca(feats["blocks"], 2)
+    fig, ax = plt.subplots(figsize=(10, 7.5))
+    sc = block_scatter(ax, scores, res["units"][cfg["primary_view"]]["block_text"], texts)
+    ax.set_xlabel(f"PC 1 ({model.explained_variance_ratio_[0]:.1%} variance)", fontsize=12)
+    ax.set_ylabel(f"PC 2 ({model.explained_variance_ratio_[1]:.1%} variance)", fontsize=12)
+    ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
+    ax.axvline(0, color="grey", linestyle="--", linewidth=0.8)
+    ax.set_title(f"PCA of 5,000-word blocks (standardized frequencies, {cfg['primary']['mfw']} MFW)", fontsize=15)
+    fig.subplots_adjust(bottom=0.16, right=0.88)
+    block_legend(fig, config, texts, sc, bottom=0.0)
+    fig.savefig(path, dpi=config["pos_check"]["figure_dpi"], bbox_inches="tight")
+    plt.close(fig)
+
+
 def rbf_figures(config: dict, res: dict, out: Path) -> None:
     """Greyscale RBF spectral layouts, one panel per sigma factor: texts (labelled points) and blocks (marker = translation,
     fill = story position on a grey ramp)."""
@@ -1038,27 +1108,16 @@ def rbf_figures(config: dict, res: dict, out: Path) -> None:
 
     r = res["spectral_rbf"]["blocks"]
     lab = res["units"][cfg["primary_view"]]["block_text"]
-    pos = relative_positions(lab)
-    markers = ["o", "s", "^", "D", "v", "P", "X"]
     fig, axes = plt.subplots(1, len(factors), figsize=(6.5 * len(factors), 6))
     for ax, f in zip(axes, factors):
         x = r["factors"][f]
-        e = x["embedding"]
-        for t, m, name in zip(texts, markers, labels):
-            idx = np.array(lab) == t
-            sc = ax.scatter(e[idx, 0], e[idx, 1], c=pos[idx], cmap="Greys", vmin=-0.15, vmax=1.0, marker=m, s=70,
-                            edgecolors="black", linewidths=0.8, label=name)
+        sc = block_scatter(ax, x["embedding"], lab, texts)
         ax.set_title(f"σ = {f:g} × median ({x['sigma']:.3f})\nλ2 = {x['eigenvalues'][1]:.3f}, λ3 = {x['eigenvalues'][2]:.3f}", fontsize=11)
         ax.set_xlabel("Component 1")
         ax.set_ylabel("Component 2")
-    handles = [plt.Line2D([], [], marker=m, linestyle="", markerfacecolor="white", markeredgecolor="black", markersize=8)
-               for m in markers[:len(texts)]]
-    fig.legend(handles, labels, loc="lower center", ncol=len(texts), frameon=False, fontsize=10, bbox_to_anchor=(0.5, -0.02))
     fig.suptitle("Spectral embedding of 5,000-word blocks (RBF affinity on Cosine Delta, 300 MFW)", fontsize=14)
     fig.subplots_adjust(bottom=0.16, top=0.85, wspace=0.25, right=0.88)
-    cbar = fig.colorbar(sc, cax=fig.add_axes([0.905, 0.2, 0.01, 0.6]))
-    cbar.set_ticks([0, 0.25, 0.5, 0.75, 1])
-    cbar.set_label("Story position (block centre as share of text; light = start, dark = end)")
+    block_legend(fig, config, texts, sc)
     fig.savefig(out / "spectral_rbf_blocks_greyscale.png", dpi=config["pos_check"]["figure_dpi"], bbox_inches="tight")
     plt.close(fig)
 
@@ -1101,7 +1160,9 @@ def figures(config: dict, res: dict) -> None:
     ev = res["mds"]["eigenvalues"]
     pos = ev[ev > 0].sum()
     scatter(config, res["mds"]["coords"], texts, "Classical MDS of Cosine Delta (all words, 300 MFW)",
-            f"Dimension 1 ({ev[0] / pos:.0%})", f"Dimension 2 ({ev[1] / pos:.0%})", out / "fig8_mds_cosine_delta_greyscale.png")
+            f"Dimension 1 ({ev[0] / pos:.0%})", f"Dimension 2 ({ev[1] / pos:.0%})", out / "appendix_mds_cosine_delta_greyscale.png")
+    fig8_spectral(config, res, out / "fig8_spectral_rbf_greyscale.png")
+    pca_blocks_figure(config, res, out / "appendix_pca_blocks_greyscale.png")
     consensus_tree_figure(config, res["consensus"], res["clade_support"], res["n_trees"], texts,
                           out / "delta_consensus_tree_greyscale.png")
     consensus_network_figure(config, res["eder"], res["n_trees"], texts,
@@ -1109,7 +1170,7 @@ def figures(config: dict, res: dict) -> None:
     sp = res["spectral"]
     note = (f"\nDEGENERATE: affinity graph has {sp['components']} disconnected components; λ1 = λ2 = λ3 = 0, layout arbitrary"
             if sp["components"] > 1 else "")
-    scatter(config, sp["embedding"], texts, "Spectral Embedding of Russian Translations (appendix)" + note,
+    scatter(config, sp["embedding"], texts, "Spectral embedding, clipped cosine affinity (not used)" + note,
             "Component 1", "Component 2", out / "appendix_spectral_embedding_greyscale.png")
     fig13(config, res["fig13"], texts, out / "fig13_mfw_content_rank_heatmap_greyscale.png")
     rbf_figures(config, res, out)

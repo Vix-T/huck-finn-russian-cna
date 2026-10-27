@@ -95,3 +95,7 @@ Ru-1926 and Ru-1933 share 30% of their eight-word sequences.
 constructed version was tested (Gaussian affinity on Cosine Delta, σ = 0.5/1/2 × median, texts and
 blocks). It is connected and stable but repeats MDS (texts) and PCA (blocks); it stays in the appendix
 (decision 53, amendment Section 8).
+
+**Follow-up (2026-10-27): Figure 8.** At the project owner's request the RBF spectral embedding (texts
+and blocks) is the replacement Figure 8, with classical MDS and PCA as appendix robustness checks
+(decision 54, amendment Section 8).
