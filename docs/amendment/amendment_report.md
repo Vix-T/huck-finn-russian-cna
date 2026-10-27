@@ -1311,7 +1311,8 @@ Add Amancio (2015)¹⁵ to the article's bibliography.
     Linguistic Computing Bulletin* 7, 172–177 (1979).
 14. Shen, L. LexicalRichness: a small module to compute textual lexical richness.
     https://github.com/LSYS/LexicalRichness. Used (cross-check only): version 0.5.1.
-15. Amancio, D. R. A complex network approach to stylometry. *PLoS ONE* 10, e0136076 (2015).
+15. Amancio, D. R. A complex network approach to stylometry. *PLoS ONE* 10(8), e0136076 (2015).
+    doi:10.1371/journal.pone.0136076.
 16. Csárdi, G. & Nepusz, T. The igraph software package for complex network research.
     *InterJournal, Complex Systems* 1695 (2006). Used: python-igraph 1.0.0.
 17. Hagberg, A. A., Schult, D. A. & Swart, P. J. Exploring network structure, dynamics, and function
