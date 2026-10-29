@@ -10,10 +10,11 @@ each pipeline stage, and the Executive Summary is updated with it.
 
 ## 1. Executive Summary
 
-We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. Seven stages are
+We rebuilt the analysis behind *Final Report 3* as a reproducible pipeline. All stages are
 complete: the data audit with text preparation, an audit of the previous motif results,
 tokenization with part-of-speech tagging, network construction, the classic stylometric measures,
-Delta with clustering and embedding, and betweenness centrality.
+Delta with clustering and embedding, the final motif analysis, and betweenness centrality.
+Length-matched motif runs, a robustness check, are set up and will be added to Section 10.
 
 **Text preparation** changes how the article should describe its data. The 1911 Engel'gardt text (Ru-1911) contains OCR damage, mainly words split by stray
 spaces. We repaired it, which reduces its vocabulary by 382 word types (1.8%). In the other four
@@ -87,10 +88,16 @@ twice as often. The old network was also lemmatized, not "unlemmatized" as §3.4
 remain in the top 5 everywhere. Figure 12 is replaced, and §3.4.2 and the Executive Summary need
 revised text (Section 11).
 
-**Motif analysis (preliminary, Ru-1911 only, 100 random networks).** On the new network no motif
-changes sign relative to Figure 9. Two motifs that were not significant in Figure 9 (74 and 108) now
-are, and the significance profile keeps its shape. The final run uses 1,000 random networks for all
-five translations (Section 10).
+**Motif analysis (final, 1,000 random networks per translation) changes three of the article's
+claims and its §3.5 conclusion.** Nearly every motif is significant in every translation (60 of 65),
+with the same sign throughout. In networks of millions of subgraphs, significance does not
+distinguish translators, so the comparison rests on the shape of the significance profile. All five
+profiles are strongly alike (r = 0.87–0.99), but Braude's stands apart, and Braude and Daruzes, the
+closest pair by vocabulary, have the least similar motif profiles. The motif results therefore do
+not agree with the Delta grouping, contrary to §3.5. Of the article's motif claims, Braude's peak in
+motif 6, Anon's in motif 12 and Daruzes's in motif 238 hold. "Braude dominates 46", "Engel'gardt is
+indifferent to 36", "Chukovsky and Daruzes are similar" and "6, 12, 36 have the greatest range" do
+not. Figures 9–11 are replaced, and §3.4, §3.4.1 and §3.5 need revised text (Section 10).
 
 ### Changes at a glance
 
@@ -128,13 +135,16 @@ five translations (Section 10).
 | Delta, Clustering and Embedding | Anon–Chukovsky share 30% of 8-grams: textual dependence, not convergent style | Finding | §3.3; Data Pipeline |
 | Delta, Clustering and Embedding | Braude–Daruzes pairing holds in 40 of 40 trees | None | — |
 | Delta, Clustering and Embedding | Spectral embedding rebuilt (Gaussian kernel on Cosine Delta, normalized Laplacian; texts and blocks); stable; MDS and PCA as appendix checks | Figure | §3.3, Figure 8 |
-| Delta, Clustering and Embedding | §3.5 agreement with Delta/spectral: Delta side partly holds; motif side pending | To be decided | §3.5 |
+| Delta, Clustering and Embedding | §3.5 agreement with Delta/spectral: does not hold (see Motif Analysis) | Finding | §3.5 |
 | Betweenness Centrality | Old network described as "unlemmatized"; it was lemmatized, directed, across sentences, distance 1/count | Wording | §3.4.2 |
 | Betweenness Centrality | Exact unweighted undirected betweenness (directed and the old 1/count as checks); igraph = networkx | Numbers | §3.4.2, Figure 12 |
 | Betweenness Centrality | Frequency adjustment (30 shuffles per text) added; betweenness tracks frequency (ρ = 0.75–0.78) | Wording | §3.4.2 |
 | Betweenness Centrality | сказать/говорить "skyrocket" in Braude and Daruzes is a frequency effect of the 1/count weighting; not more central after adjustment | Finding | §3.4.2, Figure 12; Executive Summary |
 | Betweenness Centrality | и, я, в in the top 5 of every translation | None | — |
-| Motif Analysis (preliminary) | Ru-1911, 100 random networks: no sign changes vs Figure 9; motifs 74 and 108 become significant | To be decided | §3.4.1, Figures 9–10 |
+| Motif Analysis | 1,000 random networks per text, recorded seeds; BH q < 0.05 replaces \|Z\| > 2 ("95% confidence interval"); 54 → 60 of 65 significant, 1 sign flip | Wording | §3.4.1, Figure 9 |
+| Motif Analysis | Comparison by SP shape; largest SP range in motifs 78, 110, 98 (not 6, 12, 36) | Figure | §3.4.1, Figures 10–11 |
+| Motif Analysis | Three of six translator claims hold; Braude's profile stands apart; Braude–Daruzes least similar | Finding | §3.4.1 |
+| Motif Analysis | Motif profiles do not reproduce the Delta grouping (§3.5) | Finding | §3.5; Discussion |
 
 ---
 
@@ -1133,9 +1143,9 @@ same frequency shift appears in Section 11.
 
 **§3.5's claim of agreement with "Delta Burrows and spectral embedding clustering."** On the Delta
 side, two groupings are robust: Braude–Daruzes and Anon–Chukovsky. The second reflects shared
-wording, not independent stylistic choice; the spectral embedding shows the same groups. Whether
-the network motifs agree can be judged only when the final motif results are in (Section 10). Until
-then the sentence should not claim agreement.
+wording, not independent stylistic choice; the spectral embedding shows the same groups. The final
+motif results (Section 10) do not agree: Braude and Daruzes have the least similar motif profiles,
+and Engel'gardt's profile is the most central. The sentence should not claim agreement.
 
 **Figures (replacements).**
 
@@ -1196,7 +1206,7 @@ the repository only to document why that construction is not used.
 | Spectral embedding (§3.3, Figure 8) | TF-IDF of whole texts, L = D − W described (ill-conditioned: λ3 − λ2 = 0.005) → Gaussian kernel on Cosine Delta (σ = median), symmetric normalized Laplacian, texts and blocks; stable across σ and random starts; MDS and PCA as appendix checks | The old construction rests on a near-tie of eigenvalues; the kernel keeps the graph connected | Figure (Figure 8 replaced); Wording (§3.3 method description) |
 | PCA | Not reported → PC1 is a translation axis (colloquial vs bookish); no abridged/full component | — | Wording |
 | Figure 13 | NLTK stop list, pymorphy2 lemmas → Stanza content lemmas | Same units as the rest | Figure |
-| §3.5 agreement claim | Asserted → Delta side: two robust pairs, one reflecting shared wording; motif side pending | — | To be decided (Section 10) |
+| §3.5 agreement claim | Asserted → Delta: two robust pairs (one reflecting shared wording); motifs do not reproduce them (Section 10) | Compared directly | Finding |
 
 ### 8.4 Suggested article text
 
@@ -1262,13 +1272,9 @@ describe it as "The stylistic distance between translations and between passages
 > axis. The spectral embedding was also repeated with the kernel width σ at half and twice the median
 > distance, with the same result.
 
-**§3.5.** Replace "and that there are patterns that agree with our Delta Burrows, and spectral
-embedding clustering of the translator's styles" with:
-
-> and Delta distances group Braude with Daruzes, as well as the 1926 text with its 1933 revision;
-> whether the network motifs show the same grouping is assessed with the final motif results
-
-(to be revised once Section 10 is final).
+**§3.5.** The sentence claiming agreement with "Delta Burrows, and spectral embedding clustering" is
+replaced in Section 10.4, which also states that the motif profiles do not reproduce the Delta
+grouping.
 
 Add Burrows (2002)¹⁸, Smith & Aldridge (2011)¹⁹ and Eder (2017)²⁰ to the article's bibliography.
 
@@ -1378,51 +1384,233 @@ this manner".
 
 ## 10. Motif Analysis
 
-### 10.1 Preliminary: Ru-1911, old vs new (one text, 100 random networks)
+### 10.1 What changed
 
-**Status: preliminary.** This compares one translation, Ru-1911-Engelgardt, from one new mfinder run
-with 100 random networks (seed 20261021) against Figure 9. The final analysis uses 1,000 random
-networks for all five translations. This run also used the Ru-1911 network from before Roman numerals
-were removed from the word tokens (decision 27; 21 of 60,480 distinct edges differ, and the final run
-uses the corrected network). Full statistics: `docs/motifs/motif_report.md`.
+**Old.** Figure 9 (raw Z) and Figure 10 (significance profile, SP) come from one mfinder run per
+translation with 100 random networks (the `input_OUT` run, Section 5.1). The networks were built from
+the old cleaning and pymorphy2 lemmas and linked words across sentence boundaries (Section 9). A star
+marked |Z| > 2. §3.4.1 calls this a "95% confidence interval". The randomization could not be
+repeated, and two archived runs on identical input differ by up to 1.52 in Z (Section 5.2). Figure 11
+showed motifs 6, 12 and 36, described as "the network motifs that show the greatest range in the
+normalized z-scores".
 
-**Old.** Figure 9 (the `input_OUT` run, 100 random networks). Its network linked words across
-sentence and paragraph boundaries and was built from the old cleaning and pymorphy2 lemmas
-(Sections 4 and 9).
+**New** (`src/huckfinn_cna/motifs.py`, `src/huckfinn_cna/motif_final.py`):
 
-**New.** The sentence-bounded network of Section 9. Z is recomputed from mfinder's count in every
-random network and equals mfinder's printed Z. mfinder's count in the real network equals the exact
-igraph/networkx count for all 13 subgraphs. SP is the significance profile, Z/‖Z‖ over the 13
-subgraphs. SE(Z) is the approximate standard error of a Z-score from 100 random networks,
-√((1 + Z²/2)/100). A star marks |Z| > 2.0, as in Figure 9.
+- **Networks:** the sentence-bounded networks of Section 9, verified against their recorded
+  checksums.
+- **Runs:** one mfinder 1.2 run per translation with **1,000** random networks and a recorded seed
+  (decision 29). All five finished with exit status 0. Each run's input matches the networks-v1
+  checksum, and mfinder's real-network count equals the exact igraph/networkx count for all 13
+  triads in every translation. No count is low and no sentinel value appears.
+- **Statistics:** Z is recomputed from the count in every random network and equals mfinder's
+  printed Z. Empirical p-values come from both tails (the smallest possible is 1/1001). A star now
+  means a **Benjamini–Hochberg q-value below 0.05** over the 13 triads of a translation. Also
+  reported: the abundance ratio, the concentration, SP = Z/‖Z‖ and the standard error of Z.
+- **Comparison:** translations are compared by the **shape** of their SP: the correlation between
+  SP vectors, average-linkage clustering on 1 − r, and the motifs with the largest SP range.
 
-| Motif | Old Z | New Z | ΔZ | SE(new Z) | Old SP | New SP | ΔSP | Change |
-|---|---|---|---|---|---|---|---|---|
-| 6 | 5.30* | 7.84* | +2.54 | 0.56 | +0.274 | +0.335 | +0.061 | |
-| 12 | 6.22* | 8.32* | +2.10 | 0.60 | +0.322 | +0.355 | +0.034 | |
-| 14 | −6.29* | −5.41* | +0.88 | 0.40 | −0.326 | −0.231 | +0.094 | |
-| 36 | 2.86* | 3.40* | +0.54 | 0.26 | +0.148 | +0.145 | −0.003 | |
-| 38 | −5.92* | −7.03* | −1.11 | 0.51 | −0.306 | −0.300 | +0.006 | |
-| 46 | 7.53* | 10.38* | +2.85 | 0.74 | +0.390 | +0.444 | +0.054 | |
-| 74 | 0.18 | 4.98* | +4.80 | 0.37 | +0.009 | +0.213 | +0.203 | becomes significant |
-| 78 | −7.43* | −5.22* | +2.21 | 0.38 | −0.384 | −0.223 | +0.162 | |
-| 98 | −4.59* | −6.27* | −1.68 | 0.45 | −0.238 | −0.268 | −0.031 | |
-| 102 | −3.47* | −7.16* | −3.69 | 0.52 | −0.180 | −0.306 | −0.126 | |
-| 108 | −1.34 | −5.89* | −4.55 | 0.43 | −0.069 | −0.252 | −0.182 | becomes significant |
-| 110 | 7.30* | 5.44* | −1.86 | 0.40 | +0.378 | +0.232 | −0.145 | |
-| 238 | 4.87* | 3.51* | −1.36 | 0.27 | +0.252 | +0.150 | −0.102 | |
+### 10.2 Why
 
-**Effect (preliminary).** No motif changes sign. Two motifs become significant: 74 (111D;
-Z 0.18 → 4.98) and 108 (120D; −1.34 → −5.89). Every subgraph now has |Z| > 2. The Benjamini–Hochberg
-q-values from the empirical p-values agree: all 13 subgraphs have q < 0.05, seven over- and six
-under-represented. Seven differences exceed 2 (motifs 6, 12, 46, 74, 78, 102, 108). That is well
-beyond the standard error of about 0.3–0.7 and beyond the 1.52 spread between the two archived 2025
-runs (Section 5.2), so they come from the change of network, not from randomization. The smaller
-differences (motifs 14, 36, 38, 98, 110, 238) are within the range that run-to-run variation alone
-produced in 2025. The significance profile keeps its overall shape: the same seven subgraphs are
-positive and the same six negative. Motif 46 (120U) is still the most over-represented.
+**Almost everything is significant in networks of this size, so significance does not distinguish
+the translations.** Each network has 4.8–16 million connected triads. With counts this large the
+random networks vary very little, so tiny relative differences produce large Z-scores. Real counts
+differ from the random expectation by only 0.04–7% (abundance ratios 0.0004–0.07), yet Z reaches 11.
+In all, 60 of the 65 translation–motif cells are significant, and every motif has the same sign in all
+five translations. Counting significant motifs, or reading raw Z as "how strongly" a translator
+prefers a pattern, mostly reflects network size. The comparison that carries information is the
+**shape** of the profile (Milo et al. 2004): which motifs are relatively more or less
+over-represented in one translation than in another.
 
-**Impact level: to be decided** once all five translations have been run with 1,000 random networks.
+**"95% confidence interval."** |Z| > 2 is not a confidence interval. It approximates a two-sided test
+at the 5% level for one motif, assuming the random counts are normally distributed, and with 13 motifs
+per text some such stars are expected by chance. The new stars use empirical p-values (no normality
+assumption) adjusted for the 13 tests by the Benjamini–Hochberg procedure.
+
+### 10.3 Effect
+
+**Z and SP** (1,000 random networks; * = BH q < 0.05):
+
+| Motif | Triad | Ru-1911 Z | Ru-1926 Z | Ru-1933 Z | Ru-1949 Z | Ru-1960 Z | Ru-1911 SP | Ru-1926 SP | Ru-1933 SP | Ru-1949 SP | Ru-1960 SP |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 6 | 021D | 8.42* | 6.45* | 5.66* | 11.07* | 8.18* | 0.353 | 0.363 | 0.337 | 0.471 | 0.362 |
+| 12 | 021C | 8.45* | 6.73* | 5.09* | 6.75* | 6.45* | 0.354 | 0.380 | 0.303 | 0.287 | 0.285 |
+| 14 | 111U | −5.35* | −2.64* | −4.73* | −3.87* | −4.61* | −0.224 | −0.149 | −0.281 | −0.165 | −0.204 |
+| 36 | 021U | 3.52* | 3.46* | 1.77 | 5.36* | 3.68* | 0.148 | 0.195 | 0.105 | 0.228 | 0.162 |
+| 38 | 030T | −7.55* | −6.09* | −4.93* | −9.59* | −8.04* | −0.316 | −0.343 | −0.293 | −0.408 | −0.355 |
+| 46 | 120U | 9.99* | 5.56* | 8.35* | 8.16* | 8.39* | 0.419 | 0.313 | 0.496 | 0.347 | 0.371 |
+| 74 | 111D | 5.30* | 3.81* | 3.74* | 7.83* | 4.20* | 0.222 | 0.215 | 0.222 | 0.333 | 0.186 |
+| 78 | 201 | −5.83* | −4.90* | −4.18* | −1.72 | −7.80* | −0.244 | −0.276 | −0.249 | −0.073 | −0.345 |
+| 98 | 030C | −6.09* | −5.17* | −3.50* | −1.78 | −1.50 | −0.255 | −0.292 | −0.208 | −0.076 | −0.066 |
+| 102 | 120C | −6.82* | −5.41* | −4.42* | −5.28* | −7.52* | −0.286 | −0.305 | −0.263 | −0.225 | −0.332 |
+| 108 | 120D | −6.08* | −3.93* | −4.53* | −8.94* | −4.31* | −0.255 | −0.221 | −0.269 | −0.380 | −0.190 |
+| 110 | 210 | 5.48* | 3.49* | 3.42* | 0.37 | 5.76* | 0.230 | 0.197 | 0.204 | 0.016 | 0.255 |
+| 238 | 300 | 4.02* | 4.33* | 3.13* | 2.51* | 6.68* | 0.169 | 0.244 | 0.186 | 0.107 | 0.295 |
+
+**Old → new.**
+
+- **Signs:** one sign changes in 65 cells (Daruzes, motif 98: +0.12 → −1.50, not significant either
+  way).
+- **Significance:** 54 cells had |Z| > 2 in Figure 9; now 60 are significant.
+  - Ten become significant: Engel'gardt 74 and 108; Anon 14; Chukovsky 74, 98 and 108; Daruzes 74
+    and 108.
+  - Two cease to be: Chukovsky 36 (3.28 → 1.77) and Braude 78 (−4.82 → −1.72).
+- **Unchanged ranks:** motif 46 (120U) is still the most over-represented motif in Engel'gardt and
+  Chukovsky, and motif 6 (021D) in Braude.
+
+**Stability.** Ru-1911 was also run with 100 random networks, on its network before Roman numerals
+were removed (7 fewer distinct edges in the current network). Between that run and the 1,000-network
+run, no Z moves by more than 1.8 times its combined standard error, and the two SP vectors correlate
+at r = 0.9986. Randomization noise is small. The standard error of an SP value from randomization is
+about 0.006, far below the differences between translations discussed next. It does not, however,
+measure how much SP would change with a different stretch of text; the length-matched samples
+(Section 10.5) test that.
+
+**Comparing the translations by SP shape.** The five profiles share one shape: correlations 0.87–0.99,
+and every motif has the same sign in all five. Within that shared shape:
+
+| | Ru-1911 | Ru-1926 | Ru-1933 | Ru-1949 | Ru-1960 |
+|---|---|---|---|---|---|
+| Ru-1911-Engelgardt | 1.000 | 0.984 | 0.991 | 0.907 | 0.960 |
+| Ru-1926-Anon | 0.984 | 1.000 | 0.958 | 0.893 | 0.960 |
+| Ru-1933-Chukovsky-(Ed.) | 0.991 | 0.958 | 1.000 | 0.901 | 0.957 |
+| Ru-1949-Braude | 0.907 | 0.893 | 0.901 | 1.000 | 0.869 |
+| Ru-1960-Daruzes | 0.960 | 0.960 | 0.957 | 0.869 | 1.000 |
+
+- **Braude stands apart.** It has the lowest correlation with every other translation (0.87–0.91).
+  Its profile differs mainly on three motifs that the others share: 78 (201), 98 (030C) and 110 (210)
+  are near zero in Braude but clearly negative, negative and positive in most others. It also has the
+  strongest 6 (021D), 74 (111D) and −108 (120D). These are the motifs with the largest SP range (78,
+  110, 98).
+- **Braude and Daruzes are the least similar pair** (r = 0.869). This holds under all three
+  similarity measures tried (Pearson r, Spearman ρ, Euclidean distance).
+- **The other pairings depend on the measure.** With Pearson r (and Euclidean distance) the tree is
+  ((((Engel'gardt, Chukovsky), Anon), Daruzes), Braude). With Spearman ρ it is (((Engel'gardt, Anon),
+  Daruzes), (Chukovsky, Braude)). No pairing among these four is robust.
+
+**Agreement with Delta (Section 8).** The motif profiles do **not** reproduce the Delta grouping. Delta
+pairs Braude with Daruzes in every one of 40 trees; their motif profiles are the least alike. Delta
+puts Engel'gardt farthest from everyone; its motif profile is the most central. Anon and Chukovsky,
+which share 30% of their wording, are not each other's nearest motif profile (r = 0.958; Chukovsky is
+closest to Engel'gardt). Any comparison of those two must still note that they are not independent
+texts. The two methods measure different things: Delta measures which words are used how often, and
+the motif profile measures how words are chained. They can disagree.
+
+**Figure 9–11 claims of the article** (old and new values):
+
+| Claim | Old values | New values | Verdict |
+|---|---|---|---|
+| "Braude dominates motifs 6 and 46" | 6: yes (SP 0.49, Z 11.18); 46: no (Engel'gardt highest, SP 0.39, Z 7.53) | 6: yes (SP 0.471, Z 11.07); 46: no (Chukovsky SP 0.496, Engel'gardt Z 9.99) | Holds for 6 only (46 was never true) |
+| "Engel'gardt shows indifference toward motif 36" | Lowest SP (0.15) but significant (Z 2.86) | SP 0.148, 4th of 5, significant (Z 3.52); Chukovsky lowest and not significant (1.77) | Does not hold |
+| "Daruzes shows a marked preference for motif 238" | Highest SP (0.43) | Highest SP (0.295, Z 6.68) | Holds (smaller margin) |
+| "Braude peaks in motif 6 (0.49) … Engel'gardt 0.27" | 0.495 vs 0.274 | 0.471 vs 0.353 | Holds qualitatively; values change |
+| "Anon rivals Braude in motif 12 (0.36)" | Anon highest (0.362; Braude 0.315) | Anon highest (0.380; Braude 0.287) | Holds |
+| "Chukovsky and Daruzes share similar scores across these three motifs" | Closest pair on 6, 12, 36 | 3rd closest of 10 pairs (Engel'gardt–Anon closest) | Does not hold |
+| "Across all three key motifs, Braude has the highest normalized z-scores" | No (motif 12: Anon) | No (motif 12: Braude 4th) | Does not hold (never did) |
+| Motifs 6, 12, 36 "show the greatest range" | No: largest ranges 110, 78, 98 | No: largest ranges 78, 110, 98 | Does not hold (never did) |
+| "Braude appears dominant across almost every motif … because that network contains more connections" | Already withdrawn (Section 5.3) | Braude has the largest |Z| in 5 of 13 motifs; its network is 3rd of 5 by edges | Withdrawn |
+
+**Figures (replacements).**
+
+![Figure 9 (replacement)](figures/fig9_motif_z_heatmap_greyscale.png)
+
+*Figure 9 (replacement): Raw Z-scores of the 13 three-node subgraphs (1,000 random networks). * =
+significant after Benjamini–Hochberg correction (q < 0.05).*
+
+![Figure 10 (replacement)](figures/fig10_motif_sp_heatmap_greyscale.png)
+
+*Figure 10 (replacement): Significance profiles (Z/‖Z‖), stars as in Figure 9.*
+
+![Figure 11 (replacement)](figures/fig11_key_motifs_sp_greyscale.png)
+
+*Figure 11 (replacement): Significance profile of the three motifs with the largest range across the
+translations (78, 110, 98), and of the motifs shown in the old Figure 11 (6, 12, 36).*
+
+![SP correlation](figures/motif_sp_correlation_greyscale.png)
+
+*Correlation of the significance profiles between translations, and average-linkage clustering on
+1 − r.*
+
+**Impact levels.**
+
+| Change | Old → new | Reason | Impact level |
+|---|---|---|---|
+| Random networks | 100 (one irreproducible run) → 1,000, recorded seed; Ru-1911 r = 100 vs r = 1000: SP r = 0.9986 | Precision and reproducibility | Wording |
+| Significance | \|Z\| > 2 called a "95% confidence interval" → empirical p, BH q < 0.05; 54 → 60 of 65 significant; 1 sign flip | Correct test; multiple testing | Wording (Figure 9 replaced) |
+| What is compared | Raw Z and individual motifs → SP shape (correlation, clustering, range) | Significance is near-universal at this network size | Wording |
+| Key motifs | 6, 12, 36 as "greatest range" → 78, 110, 98 have the largest range; 6, 12, 36 kept for continuity | The old claim was false | Figure (Figures 10–11 replaced) |
+| Translator claims | Six claims → three hold (Braude in 6, Daruzes in 238, Anon in 12), the rest do not | New values | Finding |
+| Pairings | Chukovsky–Daruzes similar → Braude stands apart; Braude–Daruzes the least similar pair; other pairings depend on the measure | New values | Finding |
+| §3.5 agreement with Delta | Asserted → motifs do not reproduce the Delta grouping | Compared directly | Finding |
+
+### 10.4 Suggested article text
+
+**§3.4, the significance profile paragraph.** After "… the resulting values will always form a vector
+with a total length of 1.", add:
+
+> In networks of this size nearly every motif is statistically significant: each network contains
+> millions of three-node subgraphs, so even differences of a fraction of a percent from the random
+> expectation produce large z-scores. What distinguishes the translations is therefore not which
+> motifs are significant but the shape of the profile, the relative weight of each motif within it,
+> which is what the significance profile compares.
+
+**§3.4.1.** Replace "Then it creates 100 simulations …" through "… compared to random chance." with:
+
+> Then it creates 1,000 randomized networks, each preserving every word's number of incoming and
+> outgoing connections but rewiring which words are connected. For each motif i, the z-score
+> Z_i = (N_real,i − μ_rand,i) / σ_rand,i measures how far the motif's count in the translation lies
+> from its mean in the randomized networks, in units of their standard deviation. We assessed
+> significance with empirical p-values (the share of randomized networks with a count at least as
+> extreme as the real one) and controlled for testing 13 motifs per translation with the
+> Benjamini–Hochberg false discovery rate (q < 0.05).
+
+**Figure 9 paragraph.** Replace "As seen in figure 9, the 1949 Braude translation appears dominant …
+while positive scores indicate a preference for that motif." with:
+
+> Figure 9 shows the raw z-scores. Sixty of the 65 scores are significant, and every motif has the
+> same sign in all five translations: all translators favour the same patterns (for example 46,
+> 120U, and 6, 021D) and avoid the same others (for example 38, 030T). Raw z-scores grow with the size
+> of the network, so they show where a motif is significant but not how strongly a translator prefers
+> it relative to the others. A star marks a significant score after correction for multiple testing.
+> Positive scores indicate over-representation, negative scores under-representation.
+
+**Figure 10 paragraph.** Replace "However, when we apply L2 normalization in figure 10 … retained the
+stars following the scores which were statistically significant." with:
+
+> After L2 normalization (Figure 10) the five profiles remain strongly correlated (r = 0.87–0.99),
+> but Braude's stands apart: motifs 78 (201), 98 (030C) and 110 (210), clearly under- or
+> over-represented in the other translations, are close to zero in Braude, while Braude has the
+> strongest preference for motif 6 (021D) and the strongest avoidance of motif 108 (120D). Daruzes
+> shows the strongest preference for motif 238 (300), the fully reciprocal triangle. Braude and
+> Daruzes, which are closest in their vocabulary (Section 3.3), have the least similar motif profiles
+> of any pair.
+
+**Figure 11 paragraph.** Replace with:
+
+> Figure 11 shows the three motifs whose normalized scores vary most across the translations (78,
+> 110 and 98), with the motifs 6, 12 and 36 for comparison. Braude peaks in motif 6 (0.47, against
+> 0.34–0.36 for the others), and the 1926 Anonymous translation scores highest in motif 12 (0.38).
+> The largest differences, however, lie in motifs 78, 110 and 98, where Braude departs from all the
+> other translators.
+
+**Captions.** Figure 9: "Raw z-scores of the 13 three-node network motifs (1,000 randomized networks;
+* = significant, Benjamini–Hochberg q < 0.05)." Figure 10: "Significance profiles (z-scores
+normalized to unit length); stars as in Figure 9." Figure 11: "Normalized z-scores of the three
+motifs with the largest range across the translations, and of motifs 6, 12 and 36."
+
+**§3.5.** Replace "and that there are patterns that agree with our Delta Burrows, and spectral embedding
+clustering of the translator's styles" (and the interim replacement in Section 8.4) with:
+
+> but the network motif profiles do not reproduce the grouping found by Delta and spectral
+> embedding: Braude, whose vocabulary is closest to Daruzes's, has the most distinctive motif profile
+> and the one least like Daruzes's. Word choice and word arrangement thus capture different aspects of
+> the translators' styles
+
+### 10.5 Length-matched robustness runs
+
+Network size affects Z, and SP removes only part of that effect. To test whether the SP differences
+reflect the translators or the length of the texts, each full translation will be run again on two
+samples of exactly Ru-1926's length: its first and its last 48,182 words, sentence-aligned. The networks
+and seeds are set up (networks-lm-v1); the results will be added here.
 
 ## 11. Betweenness Centrality
 

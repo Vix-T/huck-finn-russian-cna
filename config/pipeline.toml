@@ -439,3 +439,15 @@ old_dtm_all = "document_term_matrix_with_stops.csv"
 old_dtm_content = "document_term_matrix.csv"
 old_lemmatized = "Ru{i}_clean_lemmatized.txt"
 old_tfidf_random_state = 42
+
+# --- Final motif analysis (motif_final.py) ---------------------------------------------------
+
+[motif_final]
+r = 1000                          # final runs: [paths].mfinder_final_dir/TEXT_r{r}/
+stability_run = "data/interim/mfinder/Ru1_r100_s20261021"   # Ru1 r=100 preview (pre-Roman-numeral network); its results.tsv is read
+top_range = 3                     # motifs with the largest SP range across texts (replacement Figure 11)
+old_key_motifs = [6, 12, 36]      # old Figure 11 motifs, shown for continuity
+# Significance: a triad is significant in a text when its BH q-value (over the 13 triads, in the direction of
+# its Z) is below [motifs].fdr_alpha. Old Figure 10 = Z / ||Z|| of old Figure 9 (equals the old
+# significance_profile_conceptual.csv to 6e-17), so old SP is computed from [paths].old_zscores.
+sp_correlation = "pearson"        # between the five SP vectors (13 triads); average linkage on 1 - r

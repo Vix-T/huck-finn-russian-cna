@@ -343,3 +343,21 @@ Plan: `docs/plan/delta_clustering.md`. Implemented in `src/huckfinn_cna/delta.py
     (`appendix_pca_blocks_greyscale.png`), and the σ = 0.5/1/2 panels. The text-level publication order
     is reported as consistent with, not evidence for, a trend over time (n = 5; with the two pairs it
     is effectively three groups, ordered by chance one time in three).
+
+## Final motif analysis (2026-10-29)
+
+Plan: `docs/plan/motif_final.md`. Implemented in `src/huckfinn_cna/motif_final.py` (uses `motifs.analyse_run`);
+parameters in config `[motif_final]`; report `docs/motifs/motif_report.md`; figures
+`docs/amendment/figures/fig9_*`, `fig10_*`, `fig11_*`, `motif_sp_correlation_*`.
+
+55. **Run checks.** Each final run must have exit status 0 and a complete `run.log` (start, end, elapsed,
+    exit status), R = 1000, an input SHA-256 equal to its networks-v1 checksum, N_real equal to igraph
+    for all 13 triads, Z equal to mfinder's, and no flags; the module fails otherwise. All five passed.
+56. **Significance and comparison.** A triad is significant when its BH q-value (13 triads, direction of
+    Z) is below 0.05 (decision 28). Translations are compared by SP shape: Pearson correlation of the
+    13-triad SP vectors with average linkage on 1 − r (primary); Spearman ρ and Euclidean distance are
+    reported as robustness checks; SP range = max − min across the five texts. Old SP = Z/‖Z‖ of the
+    Figure 9 values (equal to the old `significance_profile_conceptual.csv` to 6e-17). Stability: Ru1
+    r = 100 (`results.tsv` of the pre-Roman-numeral run) vs r = 1000, ΔZ divided by √(SE₁₀₀² + SE₁₀₀₀²).
+57. **Figure 11.** The three motifs with the largest SP range (78, 110, 98), then the old key motifs 6, 12,
+    36 for continuity, each labelled with mfinder ID and triad code.
