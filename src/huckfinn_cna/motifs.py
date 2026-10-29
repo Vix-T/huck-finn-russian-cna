@@ -265,9 +265,18 @@ def star(z: float, threshold: float) -> str:
     return "*" if abs(z) > threshold else ""
 
 
+def run_label(config: dict, name: str) -> str:
+    """Corpus label of a text, or of a length-matched sample TEXT_SAMPLE ("label, sample")."""
+    labels = config["corpus"]["labels"]
+    if name in labels:
+        return labels[name]
+    text, _, sample = name.partition("_")
+    return f"{labels[text]}, {sample} sample" if text in labels else name
+
+
 def render_run(res: dict, config: dict, old: dict[str, dict[int, float]]) -> list[str]:
     cfg, log, rows = config["motifs"], res["log"], res["rows"]
-    label = config["corpus"]["labels"][log["text"]]
+    label = run_label(config, log["text"])
     flagged = [f"{r['mfinder_id']} ({', '.join(r['flags'])})" for r in rows if r["flags"]]
     min_p = 1 / (log["r"] + 1)
     current = repo_path(config, "networks_dir") / f"{log['text']}_mfinder.txt"

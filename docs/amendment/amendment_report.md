@@ -1610,7 +1610,10 @@ clustering of the translator's styles" (and the interim replacement in Section 8
 Network size affects Z, and SP removes only part of that effect. To test whether the SP differences
 reflect the translators or the length of the texts, each full translation will be run again on two
 samples of exactly Ru-1926's length: its first and its last 48,182 words, sentence-aligned. The networks
-and seeds are set up (networks-lm-v1); the results will be added here.
+and seeds are set up (networks-lm-v1; `docs/networks/lengthmatched_report.md`). The two samples of
+Ru-1911 do not overlap; those of Ru-1949 and Ru-1960 overlap by about 9%; those of Ru-1933, which is only
+31% longer than Ru-1926, share 69% of their words. Ru-1926's full network is its own sample. The results
+will be added here.
 
 ## 11. Betweenness Centrality
 

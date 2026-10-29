@@ -59,3 +59,8 @@ claims survive; then Part B: sample sizes, overlaps and estimated run time.
 Part A done: all five r = 1000 runs pass the checks; results in `docs/motifs/motif_report.md` and amendment
 Section 10. A robustness check of the SP clustering across similarity measures (Spearman, Euclidean) was
 added because the finer pairings changed with the measure (decision 56).
+
+Part B done (tag `networks-lm-v1`): eight length-matched samples of 48,182 words (Ru1, Ru3, Ru4, Ru5 ×
+first/last; Ru2's full network is its own sample), seeds, launcher and status. Dress rehearsal R = 2: all
+eight exit 0, N_real = igraph. Estimated R = 1000 run 6.5–8.2 h; launched at 20:00, all finish Fri 30 Oct
+between ~02:30 and ~04:15 (rough: rehearsal timings from two random networks).

@@ -361,3 +361,24 @@ parameters in config `[motif_final]`; report `docs/motifs/motif_report.md`; figu
     r = 100 (`results.tsv` of the pre-Roman-numeral run) vs r = 1000, ΔZ divided by √(SE₁₀₀² + SE₁₀₀₀²).
 57. **Figure 11.** The three motifs with the largest SP range (78, 110, 98), then the old key motifs 6, 12,
     36 for continuity, each labelled with mfinder ID and triad code.
+
+## Length-matched robustness networks (2026-10-29)
+
+Implemented in `src/huckfinn_cna/lengthmatched.py`, `scripts/run_mfinder_lengthmatched.sh`,
+`src/huckfinn_cna/mfinder_seeds.py --lengthmatched`, `src/huckfinn_cna/mfinder_status.py --set lengthmatched`;
+parameters in config `[lengthmatched]`, `[mfinder.lengthmatched]`; report `docs/networks/lengthmatched_report.md`;
+tag `networks-lm-v1`.
+
+58. **Samples.** N = Ru2's word tokens (48,182). For Ru1, Ru3, Ru4, Ru5: "first" = whole sentences from the
+    start until N words, only its last sentence cut (first words kept); "last" = whole sentences back from the
+    end, only its first sentence cut (last words kept). Edges never cross sentences (the cut sentence keeps
+    its internal edges), as in networks-v1. Ru2's full network is its own sample (its r = 1000 final run).
+    Overlap of each text's two samples: Ru1 0, Ru3 33,188 words (68.9% of N), Ru4 4,594 (9.5%), Ru5 4,246
+    (8.8%). Files: `data/interim/networks/TEXT_SAMPLE_*` (the networks-v1 files are untouched); checksums in a
+    separate section of `docs/networks/checksums.txt`, which the launch scripts check.
+59. **Seeds.** SeedSequence([20261023, text index, sample number]) mapped into 1..2147483646, sample
+    number 1 = first, 2 = last; stored in `[mfinder.lengthmatched].seeds`; a test checks them against the
+    derivation and that none equals a final-run seed.
+60. **Dress rehearsal** (R = 2, all 8 in parallel, 2026-10-29 11:59–12:01, commit 1a8b622): all exited 0;
+    N_real = igraph for all 13 triads and Z = mfinder for every sample. Per random network under eight-way
+    load 23.5–29.5 s; estimated R = 1000 run 6.5–8.2 h per sample.
