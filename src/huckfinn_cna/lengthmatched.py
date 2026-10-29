@@ -1,0 +1,161 @@
+"""Length-matched robustness networks: samples of the full translations as long as the shortest one.
+
+For each text in [lengthmatched].texts, two contiguous samples of exactly N word tokens, N = the word-token
+count of [lengthmatched].reference: "first" (from the first sentence, whole sentences, only the last one cut)
+and "last" (ending with the last sentence, whole sentences, only the first one cut). Each sample's network is
+built with the networks-v1 rules (networks.count_edges on the sample's sentences) and written to
+data/interim/networks/TEXT_SAMPLE_*; triad counts are checked igraph = networkx as for networks-v1. The
+SHA-256 of every TEXT_SAMPLE_mfinder.txt goes in a separate section of docs/networks/checksums.txt, and
+docs/networks/lengthmatched_report.md records sample boundaries, overlaps and network sizes.
+
+Usage:
+    uv run --frozen python -m huckfinn_cna.lengthmatched [--config PATH]
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+from pathlib import Path
+
+from huckfinn_cna.config import DEFAULT_CONFIG, REPO_ROOT, load_config, repo_path
+from huckfinn_cna.networks import (checked_triads, config_classes, count_edges, isolated_nodes, mutual_pairs,
+                                   node_ids, sentence_lemmas, write_text)
+from huckfinn_cna.tag import read_tagged
+
+SECTION_START = "# --- Length-matched samples (networks-lm-v1) ---"
+SECTION_END = "# --- end of length-matched samples ---"
+
+
+def first_sample(sentences: list[list[str]], n: int) -> tuple[list[list[str]], dict]:
+    """Whole sentences from the start until n words; the last sentence is cut to its first words."""
+    out, total = [], 0
+    for i, s in enumerate(sentences):
+        if total + len(s) >= n:
+            keep = n - total
+            out.append(s[:keep])
+            return out, {"start_word": 0, "end_word": n, "first_sentence": 0, "last_sentence": i,
+                         "cut_sentence_kept": keep, "cut_sentence_length": len(s)}
+        out.append(s)
+        total += len(s)
+    raise ValueError(f"text has only {total} words, fewer than {n}")
+
+
+def last_sample(sentences: list[list[str]], n: int) -> tuple[list[list[str]], dict]:
+    """Whole sentences back from the end until n words; the first sentence is cut to its last words."""
+    total_words = sum(len(s) for s in sentences)
+    out, total = [], 0
+    for i in range(len(sentences) - 1, -1, -1):
+        s = sentences[i]
+        if total + len(s) >= n:
+            keep = n - total
+            out.append(s[len(s) - keep:])
+            out.reverse()
+            return out, {"start_word": total_words - n, "end_word": total_words, "first_sentence": i,
+                         "last_sentence": len(sentences) - 1, "cut_sentence_kept": keep, "cut_sentence_length": len(s)}
+        out.append(s)
+        total += len(s)
+    raise ValueError(f"text has only {total} words, fewer than {n}")
+
+
+def overlap(a: dict, b: dict) -> int:
+    """Word tokens shared by two samples (word-index intervals [start, end))."""
+    return max(0, min(a["end_word"], b["end_word"]) - max(a["start_word"], b["start_word"]))
+
+
+def build_sample(sentences: list[list[str]], classes: list[dict]) -> dict:
+    """A networks.write_text-compatible result for a sample's sentences."""
+    edges, loops = count_edges(sentences)
+    ids = node_ids(sentences)
+    id_edges = sorted((ids[a], ids[b]) for a, b in edges)
+    return {"sentences": sentences, "edges": edges, "ids": ids, "id_edges": id_edges,
+            "stats": {"sentences": len(sentences), "word_tokens": sum(len(s) for s in sentences), "nodes": len(ids),
+                      "isolated_nodes": isolated_nodes(ids, edges), "edges": len(edges),
+                      "edge_weight_total": sum(edges.values()), "mutual_pairs": mutual_pairs(edges),
+                      "self_loops_dropped": sum(loops.values())},
+            "triads": checked_triads(len(ids), id_edges, classes)}
+
+
+def update_checksums(path: Path, lines: list[str]) -> None:
+    """Replace (or append) the length-matched section of the checksums file; other lines are untouched."""
+    text = path.read_text(encoding="utf-8")
+    if SECTION_START in text:
+        before, rest = text.split(SECTION_START, 1)
+        after = rest.split(SECTION_END, 1)[1].lstrip("\n")
+        text = before.rstrip("\n") + "\n" + after
+    block = [SECTION_START,
+             "# Samples of exactly N word tokens (N = Ru2's word tokens) from `uv run --frozen python -m huckfinn_cna.lengthmatched`;",
+             "# see docs/networks/lengthmatched_report.md. Ru2's own sample is its full network above."] + lines + [SECTION_END]
+    path.write_text(text.rstrip("\n") + "\n#\n" + "\n".join(block) + "\n", encoding="utf-8")
+
+
+def sample_name(text: str, sample: str) -> str:
+    return f"{text}_{sample}"
+
+
+def render_report(config: dict, n: int, data: dict) -> str:
+    cfg, labels = config["lengthmatched"], config["corpus"]["labels"]
+    L = ["# Length-matched sample networks", "",
+         "Generated by `uv run --frozen python -m huckfinn_cna.lengthmatched`. Samples of exactly "
+         f"N = {n:,} word tokens (the word-token count of {cfg['reference']}, {labels[cfg['reference']]}, whose full "
+         "network is its own sample). *first* starts at the first sentence and cuts only its last sentence; *last* ends "
+         "at the last sentence and cuts only its first sentence. Networks built with the networks-v1 rules; triad counts "
+         "igraph = networkx.", "",
+         "| Sample | Text words | Word range | Sentences (whole + cut) | Cut sentence: words kept / length | Nodes | Edges | "
+         "Mutual pairs | Self-loops dropped | SHA-256 |", "|---|---|---|---|---|---|---|---|---|---|"]
+    for name, d in data.items():
+        b, st = d["bounds"], d["result"]["stats"]
+        L.append(f"| {name} | {d['text_words']:,} | {b['start_word']:,}–{b['end_word']:,} | {st['sentences'] - 1:,} + 1 | "
+                 f"{b['cut_sentence_kept']} / {b['cut_sentence_length']} | {st['nodes']:,} | {st['edges']:,} | "
+                 f"{st['mutual_pairs']:,} | {st['self_loops_dropped']} | `{d['sha256'][:16]}…` |")
+    L += ["", "Overlap between each text's two samples:", "", "| Text | Text words | Overlap (word tokens) | Share of N |",
+          "|---|---|---|---|"]
+    for t in cfg["texts"]:
+        a, b = data[sample_name(t, "first")], data[sample_name(t, "last")]
+        ov = overlap(a["bounds"], b["bounds"])
+        L.append(f"| {t} | {a['text_words']:,} | {ov:,} | {ov / n:.1%} |")
+    return "\n".join(L)
+
+
+def run(config_path: Path = DEFAULT_CONFIG) -> dict:
+    config = load_config(config_path)
+    cfg, char_map = config["lengthmatched"], config["networks"]["lemma_char_map"]
+    classes = config_classes(config)
+    tagged = repo_path(config, "tagged_dir")
+    ref = sentence_lemmas(read_tagged(tagged / f"{cfg['reference']}.tsv"), char_map)
+    n = sum(len(s) for s in ref)
+    out_dir = repo_path(config, "networks_dir")
+    data, lines = {}, []
+    for t in cfg["texts"]:
+        sentences = sentence_lemmas(read_tagged(tagged / f"{t}.tsv"), char_map)
+        for sample in cfg["samples"]:
+            sents, bounds = (first_sample if sample == "first" else last_sample)(sentences, n)
+            result = build_sample(sents, classes)
+            if result["stats"]["word_tokens"] != n:
+                raise RuntimeError(f"{t} {sample}: {result['stats']['word_tokens']} words, expected {n}")
+            name = sample_name(t, sample)
+            write_text(out_dir, name, result, config, classes)
+            path = out_dir / f"{name}_mfinder.txt"
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            lines.append(f"{digest}  {path.relative_to(REPO_ROOT)}")
+            data[name] = {"bounds": bounds, "result": result, "sha256": digest,
+                          "text_words": sum(len(s) for s in sentences)}
+    update_checksums(repo_path(config, "network_checksums"), lines)
+    report = repo_path(config, "lengthmatched_report")
+    report.write_text(render_report(config, n, data) + "\n", encoding="utf-8")
+    return {"n": n, "data": data}
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    args = parser.parse_args()
+    out = run(args.config)
+    print(f"N = {out['n']:,}")
+    for name, d in out["data"].items():
+        st = d["result"]["stats"]
+        print(f"{name}: words {d['bounds']['start_word']:,}-{d['bounds']['end_word']:,}, nodes {st['nodes']:,}, edges {st['edges']:,}")
+
+
+if __name__ == "__main__":
+    main()

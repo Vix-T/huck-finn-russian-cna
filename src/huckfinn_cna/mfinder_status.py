@@ -1,4 +1,5 @@
-"""Progress of the final mfinder runs (data/interim/mfinder/final/TEXT_r{R}/), one line per text.
+"""Progress of the final mfinder runs (data/interim/mfinder/final/TEXT_r{R}/) or, with --set lengthmatched, of the
+length-matched runs (data/interim/mfinder/lengthmatched/TEXT_SAMPLE_r{R}/), one line per run.
 
 Random networks done = sections in TEXT_..._INTER.txt (mfinder -oi writes and flushes one after each
 random network). Elapsed time runs from the start time in run.log. The estimated finish assumes the
@@ -71,15 +72,21 @@ def text_status(run_dir: Path, r: int, now: datetime) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("r", nargs="?", type=int)
+    parser.add_argument("--set", choices=["final", "lengthmatched"], default="final",
+                        help="final: TEXT_r{R} under [paths].mfinder_final_dir; lengthmatched: TEXT_SAMPLE_r{R} under "
+                             "[paths].mfinder_lengthmatched_dir")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     args = parser.parse_args()
     config = load_config(args.config)
-    r = args.r if args.r is not None else config["mfinder"]["final"]["r"]
-    final_root = repo_path(config, "mfinder_final_dir")
+    r = args.r if args.r is not None else config["mfinder"][args.set]["r"]
+    if args.set == "final":
+        root, names = repo_path(config, "mfinder_final_dir"), config["corpus"]["texts"]
+    else:
+        root, names = repo_path(config, "mfinder_lengthmatched_dir"), list(config["mfinder"]["lengthmatched"]["seeds"])
     now = datetime.now().astimezone()
-    print(f"mfinder final runs, R = {r}, at {now:%a %d %b %H:%M:%S}")
-    for text in config["corpus"]["texts"]:
-        print(f"  {text}: {text_status(final_root / f'{text}_r{r}', r, now)}")
+    print(f"mfinder {args.set} runs, R = {r}, at {now:%a %d %b %H:%M:%S}")
+    for name in names:
+        print(f"  {name}: {text_status(root / f'{name}_r{r}', r, now)}")
 
 
 if __name__ == "__main__":

@@ -18,3 +18,16 @@
 25c001f1bae3463bcb991f3614429c1c0991834c634a5ea4797bf6e2e0e75f6b  data/interim/networks/Ru3_mfinder.txt
 5eeb99241dae9eac0e0660693b45a41b9feabd769bfdc1323b76ba2dc6c3f4e3  data/interim/networks/Ru4_mfinder.txt
 ce64971863b1d975c7867357f3b7d7682bdf184794b9a8f1c44edcab514c0842  data/interim/networks/Ru5_mfinder.txt
+#
+# --- Length-matched samples (networks-lm-v1) ---
+# Samples of exactly N word tokens (N = Ru2's word tokens) from `uv run --frozen python -m huckfinn_cna.lengthmatched`;
+# see docs/networks/lengthmatched_report.md. Ru2's own sample is its full network above.
+bf43552e2cca56a64c342b03c0f48faa73152a5220fc8948dedb50565a3a4549  data/interim/networks/Ru1_first_mfinder.txt
+51d74f6870cca44d97e9752d7ccdf5b5b255fc5abb035124d4d18834649379d9  data/interim/networks/Ru1_last_mfinder.txt
+c4d285e03abee576e09b82ece2ce8f365706f6b2f1c82ddc20c88254d2c73335  data/interim/networks/Ru3_first_mfinder.txt
+598fcfa411248bf154184a202f22cb6d41bfa67e4fc0add26c8958a00ec649bf  data/interim/networks/Ru3_last_mfinder.txt
+9e5221c43b42b2909fb0008b9bceffde385d9aae1c21d12fa60fbf1930bf08a7  data/interim/networks/Ru4_first_mfinder.txt
+a4c7b26b5c3d2d2e2fb4aea6aaeb72806ac2fa056ac1f122c2ab7225689e9583  data/interim/networks/Ru4_last_mfinder.txt
+72fe82c76d9c39d58391c855084d4405d8c8634006ec508f4dc96e1bda2b99dc  data/interim/networks/Ru5_first_mfinder.txt
+b87d22b4b2c244903f84db22f51a0c09cf4f3826ec529514736da713c9fe9bf6  data/interim/networks/Ru5_last_mfinder.txt
+# --- end of length-matched samples ---
