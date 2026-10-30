@@ -1,7 +1,7 @@
 # Amendment Report: Rebuilt Pipeline for *Comparative Stylometric Analysis of Mark Twain's "The Adventures of Huckleberry Finn" Russian Translations*
 
 **Vix Talbot**
-10-2026 (last updated 2026-10-27)
+10-2026 (last updated 2026-10-29)
 
 Companion to *Final Report 3*¹ (11-2025). This is a living report: a section is added at the end of
 each pipeline stage, and the Executive Summary is updated with it.
@@ -48,7 +48,7 @@ is replaced, and §3.2.2, the Executive Summary and the Discussion need revised 
 **Classic stylometric measures confirm the richness ranking but change two findings.**
 Engel'gardt's vocabulary is the richest of the five on every length-robust measure: MSTTR, MATTR,
 MTLD, HD-D, Yule's K and entropy, on whole texts and on 48,000-word samples alike. The abridged
-translations come next, and Braude and Daruzes are the least rich. Honoré's measure (correctly
+translations come next (not independent of each other: they share 30% of their eight-word sequences), and Braude and Daruzes are the least rich. Honoré's measure (correctly
 called R, not W) no longer ranks the abridged 1926 translation richest; that translation now comes
 last. But R barely separates the five translations and agrees with no other measure, so the article
 should stop using it to rank them. Average sentence length, counted in words without punctuation
@@ -154,6 +154,9 @@ Before submission, we rebuilt the analysis as a reproducible pipeline. It has a 
 environment, a single configuration file for every parameter, seeded randomness, automated tests and
 one command to run each stage. With these, peer reviewers can clone the repository and reproduce
 every result in the article.
+`README.md` gives setup and data requirements, `METHODS.md` the methods as implemented, and
+`scripts/reproduce.sh` runs the whole pipeline in order (with `--quick`, mfinder at R = 2 and a check that
+every report not depending on the randomization equals the committed one).
 
 Reviewing each step during the rebuild turned up a number of corrections. This report documents
 them stage by stage. For each correction it gives the old value or practice, the new one and the
@@ -181,6 +184,12 @@ numbers refer to *Final Report 3*.
 ---
 
 ## 4. Data Audit and Text Preparation
+
+**Corpus.** Five translations: Ru-1911-Engelgardt (full), Ru-1926-Anon (abridged), Ru-1933-Chukovsky-(Ed.)
+(abridged), Ru-1949-Braude (full) and Ru-1960-Daruzes (full). The two abridged texts are not independent:
+Ru-1933 shares 30% of Ru-1926's distinct eight-word sequences (23% of its own), against at most 0.7% for any
+other pair, so the 1933 edition is in large part a revision of the 1926 text (Section 8). Both are kept, as
+two published editions, and this is stated wherever the two are compared.
 
 ### 4.1 Input handling
 
@@ -627,7 +636,8 @@ What the intervals show, taking non-overlapping intervals as the criterion:
 - **The verb lead of the abridged translations depends on the tagger.** Under Stanza the NOUN : VERB
   intervals of Ru-1926 and Ru-1933 lie below 1. Under spaCy they include 1 (0.949–1.011 and
   0.959–1.013), so verbs and nouns are not distinguishable there. For Braude and Daruzes the intervals
-  lie below 1 under both taggers.
+  lie below 1 under both taggers. The two abridged texts' similar ratios are not independent evidence
+  (the 1933 text shares 30% of the 1926 text's distinct eight-word sequences; Section 8).
 - **The 1911→1960 verb-form trend holds outside the intervals.** For finite verbs, participles and
   verbal adverbs, the Ru-1911 and Ru-1960 intervals are far apart under both taggers, and every
   consecutive step is separated except two. Ru-1926 and Ru-1933 overlap on all three shares, and
@@ -671,7 +681,8 @@ translations …" with:
 > slightly outnumber nouns here too). In the four later translations verbs rank first and nouns
 > second. The ratio is close to parity in the abridged 1926 and 1933 translations (0.95; with the
 > second tagger the intervals include 1) and lowest in Braude (0.85) and Daruzes (0.81), whose
-> intervals overlap, so the two cannot be distinguished. The later translations also rely more on
+> intervals overlap, so the two cannot be distinguished. (The 1926 and 1933 texts are not independent:
+> the 1933 edition shares 30% of the 1926 text's eight-word sequences; see §3.3.) The later translations also rely more on
 > finite verb forms (from 65% of verbs in Engel'gardt to 78% in Daruzes) and less on participles
 > (6.2% to 1.8%) and verbal adverbs (5.3% to 1.4%); these differences lie well outside the
 > bootstrap intervals under both taggers.
@@ -740,6 +751,9 @@ takes exactly that many consecutive words. Each text contributes its non-overlap
 Ru-1911 and one for each of the others, Ru-1926's being its whole text. Each text except Ru-1926 also
 contributes 200 samples at random paragraph starts (seed 20261026), which show how much the measure
 varies between passages of the same translation.
+Because Ru-1926 is itself only 48,000 words long, it has no such spread. A second comparison therefore
+uses half-length windows: 200 random 24,000-word windows per translation, Ru-1926 included (12,500 words
+in the content-word view; same seed, separate stream).
 
 **Sentence length.** Stanza's sentences (Section 6), counted in word tokens, with punctuation
 excluded and dialogue taken as the splitter gives it. We report the mean, median and interquartile
@@ -775,11 +789,21 @@ passage-to-passage spread. MATTR-500 at 48,000 words is 0.554–0.572 for Ru-191
 random samples), against 0.528 for Ru-1926, 0.533 for Ru-1933 and at most 0.512 for the later two.
 MTLD at 48,000 words is 136–150 for Ru-1911, against 101–108 for the next translation. The rest of
 the old order also holds. The two abridged translations come next, Ru-1933 slightly ahead of Ru-1926
-on most measures, and Braude and Daruzes are the least rich. The order of Braude and Daruzes depends
+on most measures (their closeness is not independent evidence (the 1933 text shares 30% of the 1926 text's distinct eight-word sequences; Section 8)), and Braude and Daruzes are the least rich. The order of Braude and Daruzes depends
 on the measure. Braude is lower on Yule's K, MTLD, HD-D, entropy and MATTR-100/500. Daruzes is lower
 on MSTTR and MATTR-1000, and in the content-word view on every measure. On Yule's K (all words)
 the two are distinguishable (101.0, 98.5–103.8, against 86.4, 84.5–88.4). With content words only,
 they are not (20.7 against 20.8).
+
+**Half-length windows.** On 24,000-word windows, every translation's spread can be compared, Ru-1926's
+included. The richness order of the window means is the same as at 48,000 words on every measure except
+Honoré's R. With all words, Engel'gardt's central 95% range lies clear of every other translation on
+MATTR (all three windows), MTLD and HD-D. It touches Chukovsky's on MSTTR, Yule's K and entropy, and
+every range overlaps on Honoré's R. The two
+abridged texts overlap on every measure (they also share 30% of their eight-word sequences; Section 8),
+and so do Braude and Daruzes. Ru-1926's ranges are the narrowest of the five on every measure but Honoré's R, partly because its
+windows are drawn from a text only twice their length, so they overlap heavily; its spread is
+understated rather than comparable. Table: `docs/classic/classic_report.md`, "Half-length windows".
 
 **(b) The Honoré contradiction does not persist in its old form, but R still disagrees with Yule's
 K.** In the article, R ranked the abridged Ru-1926 richest (2060.3). Now Ru-1926 has the lowest R of
@@ -809,7 +833,8 @@ Stanza sentences gives 14.2–18.2. The rest, 0.8–1.7 words, comes from the ne
 the cleaning. The old order was Braude > Daruzes > Engel'gardt > Anon > Chukovsky. The new order is
 Braude > Engel'gardt > Daruzes > Anon > Chukovsky. The 95% intervals of the first three overlap, so
 they cannot be told apart, and Braude and Daruzes no longer stand out as having the longest
-sentences. The abridged translations remain clearly shorter, and distinct from each other. Engel'gardt
+sentences. The abridged translations remain clearly shorter, and distinct from each other despite their shared
+wording (the 1933 text shares 30% of the 1926 text's distinct eight-word sequences; Section 8). Engel'gardt
 punctuates least (221 marks per 1,000 words, against 248–262), so counting punctuation had understated
 his sentences relative to the others. His median sentence (12 words) is the longest of the five.
 
@@ -902,7 +927,7 @@ shorter sentences.*
 | Honoré's "W" | Named W; Ru-1926 highest; "skewed by short abridged texts" → named R; Ru-1926 lowest; R hardly separates the texts and agrees with no other measure | Correct name; length control shows the abridged texts are not favoured | Finding (Figure 2 replaced) |
 | Chunked TTR | 0.485–0.552 → MSTTR 0.339–0.397 (all words), 0.472–0.547 (content) | Stop words kept | Numbers (Figure 3 replaced) |
 | New measures | — → MATTR, MTLD, HD-D | Length-robust confirmation of the richness ranking | Wording |
-| Length control | Whole texts only → also 48,000-word samples; Engel'gardt's lead and the K order hold | The abridged texts are 42–69% of the length of the full translations | Wording |
+| Length control | Whole texts only → also 48,000-word samples, and 24,000-word windows that give Ru-1926 a spread; Engel'gardt's lead and the K order hold | The abridged texts are 42–69% of the length of the full translations | Wording |
 | Unigram entropy | 9.326–9.949 → 9.328–9.944; same order | — | Numbers (Figure 5 replaced) |
 | Sentence length | NLTK on raw text, punctuation counted (15.0–20.0) → Stanza sentences, words only (11.3–14.5); Braude, Engel'gardt and Daruzes not distinguishable | Punctuation marks are not words | Finding (Figure 4 replaced) |
 | Uncertainty | None → bootstrap intervals (sentence length, K, HD-D); random-sample spread (other measures) | — | Wording |
@@ -920,7 +945,8 @@ shorter sentences.*
 > translation.
 >
 > Engel'gardt has the lowest K by a clear margin (61.6; 95% bootstrap interval 60.3–63.2). The
-> abridged translations follow (Chukovsky 72.0, Anon 77.2), then Daruzes (86.4), with Braude highest
+> abridged translations follow (Chukovsky 72.0, Anon 77.2; the 1933 edition shares 30% of the 1926
+> text's eight-word sequences, §3.3, so the two are not independent), then Daruzes (86.4), with Braude highest
 > (101.0). The order is the same on 48,000-word samples (Figure 1).
 >
 > Honoré's R barely separates the translations: all five lie between 2,081 and 2,155 on 48,000-word
@@ -945,7 +971,7 @@ to be the most lexically complex translator …" with:
 > Engel'gardt has the most varied vocabulary on every one of these measures (MSTTR 0.397, MATTR
 > 0.561, MTLD 139), on whole texts and on 48,000-word samples alike, and his lead lies well outside
 > the variation between passages. The abridged 1926 and 1933 translations follow (MSTTR 0.367 and
-> 0.373), and Braude and Daruzes are the least varied (0.346 and 0.339); which of these two is lower
+> 0.373; the two share 30% of their eight-word sequences, §3.3, and are not independent), and Braude and Daruzes are the least varied (0.346 and 0.339); which of these two is lower
 > depends on the measure. Counting content words only gives the same picture (MSTTR 0.547, 0.502,
 > 0.506, 0.488, 0.472).
 
@@ -956,7 +982,8 @@ to be the most lexically complex translator …" with:
 > Sentences were identified by the Stanza sentence splitter and their length counted in words;
 > punctuation marks are not counted. Braude (14.5 words; 95% bootstrap interval 14.1–15.0),
 > Engel'gardt (14.3; 14.0–14.6) and Daruzes (13.9; 13.5–14.3) cannot be told apart. The abridged
-> translations have shorter sentences (Anon 12.6, Chukovsky 11.3), which supports the idea that they
+> translations have shorter sentences (Anon 12.6, Chukovsky 11.3; distinct although the 1933 edition
+> shares 30% of the 1926 text's eight-word sequences, §3.3), which supports the idea that they
 > were adapted for a younger audience. Engel'gardt's typical sentence is the longest of the five
 > (median 12 words, against 9–10), and he uses the least punctuation (221 marks per 1,000 words,
 > against 248–262).
@@ -994,7 +1021,9 @@ local folder, data audit "Old local folder inventory"):
   cosine dendrograms passed the **square** distance matrix to `linkage`, which treats each row as a
   feature vector and clusters those rows. Burrows's Delta instead uses relative frequencies of the
   most frequent words, z-scored over a reference set.
-- **Figure 8** (spectral embedding) used TF-IDF vectors of the five whole texts. scikit-learn's
+- **Figure 8** (spectral embedding) was not built from the Figure 7 similarity matrix, as §3.3
+  describes it. Script `09` computed a separate matrix: TF-IDF vectors of the five whole texts
+  (`TfidfVectorizer` on `Ru#_clean_lemmatized.txt`), compared by cosine similarity. scikit-learn's
   default token pattern drops one-letter words, so и, я, в, с, а, к, у, о were never counted:
   12.6–15.3% of each text's tokens. The plotted coordinates reproduce exactly. §3.3 describes the
   method as L = D − W; scikit-learn uses the symmetric normalized Laplacian I − D^−1/2 W D^−1/2, drops
@@ -1203,7 +1232,7 @@ the repository only to document why that construction is not used.
 | Anon–Chukovsky | "Abridged pair" with similar style → shared wording (30% of 8-grams) | Textual dependence | Finding |
 | Braude–Daruzes pair | Holds (40 of 40 trees) | — | None |
 | Engel'gardt | Outlier → most distant, but grouped with the abridged pair under Cosine Delta | Distance-dependent | Wording |
-| Spectral embedding (§3.3, Figure 8) | TF-IDF of whole texts, L = D − W described (ill-conditioned: λ3 − λ2 = 0.005) → Gaussian kernel on Cosine Delta (σ = median), symmetric normalized Laplacian, texts and blocks; stable across σ and random starts; MDS and PCA as appendix checks | The old construction rests on a near-tie of eigenvalues; the kernel keeps the graph connected | Figure (Figure 8 replaced); Wording (§3.3 method description) |
+| Spectral embedding (§3.3, Figure 8) | A separate TF-IDF matrix of whole texts (not the Figure 7 matrix §3.3 describes), L = D − W described (ill-conditioned: λ3 − λ2 = 0.005) → Gaussian kernel on Cosine Delta (σ = median), symmetric normalized Laplacian, texts and blocks; stable across σ and random starts; MDS and PCA as appendix checks | The old construction rests on a near-tie of eigenvalues; the kernel keeps the graph connected | Figure (Figure 8 replaced); Wording (§3.3 method description) |
 | PCA | Not reported → PC1 is a translation axis (colloquial vs bookish); no abridged/full component | — | Wording |
 | Figure 13 | NLTK stop list, pymorphy2 lemmas → Stanza content lemmas | Same units as the rest | Figure |
 | §3.5 agreement claim | Asserted → Delta: two robust pairs (one reflecting shared wording); motifs do not reproduce them (Section 10) | Compared directly | Finding |

@@ -382,3 +382,19 @@ tag `networks-lm-v1`.
 60. **Dress rehearsal** (R = 2, all 8 in parallel, 2026-10-29 11:59–12:01, commit 1a8b622): all exited 0;
     N_real = igraph for all 13 triads and Z = mfinder for every sample. Per random network under eight-way
     load 23.5–29.5 s; estimated R = 1000 run 6.5–8.2 h per sample.
+
+## Wrap-up (2026-10-29)
+
+Plan: `docs/plan/wrapup.md`.
+
+61. **Ru-1933 and Ru-1926 both kept** (project owner's decision, 2026-10-29). The 1933 text shares 30% of the
+    1926 text's distinct eight-word sequences (23% of its own; at most 0.7% for any other pair; decision 49),
+    so it is largely a revision of the 1926 text. Both stay in every analysis as two published editions; the
+    shared wording is stated in the corpus description (amendment §4, `METHODS.md`, `README.md`) and wherever
+    the two abridged texts are compared (amendment §§1, 6, 7, 8, 10).
+62. **Half-length windows** (classic measures; config `[lexical]` `half_divisor`, `half_windows`,
+    `half_windows_stream`). So that Ru2 also gets a spread: 200 random windows per text, every text
+    included, of N // 2 tokens per view (all 24,000; content 12,500), drawn as in decision 33 with generator
+    `default_rng([20261026, 2, text index])`. Reported as mean and central 95% range per text, the pairs whose
+    ranges overlap, and the rank order of the window means against the equal-length order. Existing
+    samples, windows and bootstrap are unchanged (separate stream).

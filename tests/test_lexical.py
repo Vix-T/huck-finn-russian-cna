@@ -161,6 +161,16 @@ class SampleTests(unittest.TestCase):
         self.assertEqual(lx.richness_order({"a": 1, "b": 3}, True), ["b", "a"])
         self.assertEqual(lx.richness_order({"a": 1, "b": 3}, False), ["a", "b"])
 
+    def test_half_length_summary_and_overlaps(self):
+        cfg = {"bootstrap_ci": 0.95, "quantile_method": "linear"}
+        results = {"A": {"views": {"all": {"half": [{"k": x} for x in np.linspace(0, 1, 101)]}}},
+                   "B": {"views": {"all": {"half": [{"k": x} for x in np.linspace(0.9, 2, 101)]}}},
+                   "C": {"views": {"all": {"half": [{"k": x} for x in np.linspace(5, 6, 101)]}}}}
+        s = lx.summarize_half(results["A"]["views"]["all"], "k", cfg)
+        self.assertAlmostEqual(s["mean"], 0.5)
+        self.assertAlmostEqual(s["lo"], 0.025)
+        self.assertEqual(lx.half_overlaps(results, "all", "k", cfg), [("A", "B")])
+
 
 class ConfigTests(unittest.TestCase):
     def test_lexical_config(self):
@@ -169,6 +179,7 @@ class ConfigTests(unittest.TestCase):
         self.assertIn(cfg["mattr_primary"], cfg["mattr_windows"])
         self.assertNotIn(cfg["master_seed"], (20261022, 20261023))
         self.assertNotEqual(cfg["bootstrap_stream"], cfg["windows_stream"])
+        self.assertEqual(len({cfg["bootstrap_stream"], cfg["windows_stream"], cfg["half_windows_stream"]}), 3)
 
 
 if __name__ == "__main__":

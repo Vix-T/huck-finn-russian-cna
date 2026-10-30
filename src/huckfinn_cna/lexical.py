@@ -346,6 +346,11 @@ def analyse_text(job: tuple) -> dict:
             "random": [measures(view.codes[s:s + length], cfg, len(view.types)) for s in rand],
             "lexicalrichness": lexicalrichness_values(view, cfg),
         }
+        half = length // cfg["half_divisor"]
+        half_rand = random_starts(starts, view.n, half, cfg["half_windows"],
+                                  rng_for(cfg, cfg["half_windows_stream"], text_index))
+        out["views"][view_name].update(half_length=half, half_starts=[int(s) for s in half_rand],
+                                       half=[measures(view.codes[s:s + half], cfg, len(view.types)) for s in half_rand])
 
     out["sentences"]["whole"] = sentence_measures(sents.words, int(sents.punct.sum()), method)
     nonempty = sents.words > 0
@@ -395,6 +400,20 @@ def summarize_samples(entry: dict, key: str, cfg: dict) -> dict:
     return out
 
 
+def summarize_half(entry: dict, key: str, cfg: dict) -> dict:
+    """Mean and central interval of the half-length random windows."""
+    vals = np.array([m[key] for m in entry["half"]])
+    lo, hi = percentile_ci(vals, cfg["bootstrap_ci"], cfg["quantile_method"])
+    return {"mean": float(vals.mean()), "lo": lo, "hi": hi}
+
+
+def half_overlaps(results: dict, view: str, key: str, cfg: dict) -> list[tuple[str, str]]:
+    """Pairs of texts whose half-length window intervals overlap."""
+    s = {t: summarize_half(r["views"][view], key, cfg) for t, r in results.items()}
+    ids = list(s)
+    return [(a, b) for i, a in enumerate(ids) for b in ids[i + 1:] if s[a]["lo"] <= s[b]["hi"] and s[b]["lo"] <= s[a]["hi"]]
+
+
 def rank_comparison(results: dict, view: str, cfg: dict) -> dict:
     """Per measure: richness order on whole texts, at equal length (mean of non-overlapping samples)
     and by the mean of the random windows."""
@@ -405,8 +424,9 @@ def rank_comparison(results: dict, view: str, cfg: dict) -> dict:
         o_whole = richness_order(whole, higher)
         o_eq = richness_order({t: e["nonoverlapping_mean"] for t, e in eq.items()}, higher)
         o_rand = richness_order({t: e["random_mean"] for t, e in eq.items()}, higher)
-        out[key] = {"whole": o_whole, "equal": o_eq, "random": o_rand,
-                    "same": o_whole == o_eq, "same_random": o_eq == o_rand}
+        o_half = richness_order({t: summarize_half(r["views"][view], key, cfg)["mean"] for t, r in results.items()}, higher)
+        out[key] = {"whole": o_whole, "equal": o_eq, "random": o_rand, "half": o_half,
+                    "same": o_whole == o_eq, "same_random": o_eq == o_rand, "same_half": o_eq == o_half}
     return out
 
 
@@ -446,7 +466,8 @@ def render_report(config: dict, results: dict) -> str:
          f"{cfg['honore_scale']} · ln N / (1 − V1/V); entropy log{cfg['entropy_base']}.",
          f"Bootstrap: paragraphs resampled with replacement, {cfg['bootstrap_resamples']:,} resamples, percentile "
          f"{level} intervals; master seed {cfg['master_seed']}, generator numpy `default_rng([{cfg['master_seed']}, "
-         f"stream, text index])`, stream {cfg['bootstrap_stream']} = bootstrap, {cfg['windows_stream']} = random windows.",
+         f"stream, text index])`, stream {cfg['bootstrap_stream']} = bootstrap, {cfg['windows_stream']} = random windows, "
+         f"{cfg['half_windows_stream']} = half-length windows.",
          ""]
 
     L += ["## Tokens and equal-length samples", "",
@@ -498,14 +519,31 @@ def render_report(config: dict, results: dict) -> str:
                 cells.append(c)
             L.append(f"| {label} | " + " | ".join(cells) + " |")
 
+        half = results[ids[0]]["views"][v]["half_length"]
+        L += ["", f"## Half-length windows, view {v}", "",
+              f"{cfg['half_windows']} random windows of {half:,} tokens (N // {cfg['half_divisor']}) per text, every text "
+              f"included, drawn like the random windows above (stream {cfg['half_windows_stream']}): mean and central "
+              f"{level} range. *Overlapping pairs*: text pairs whose ranges overlap.", "",
+              "| Measure | " + " | ".join(ids) + " | Overlapping pairs |", "|---|" + "---|" * (len(ids) + 1)]
+        for key, (label, _, d) in meas.items():
+            cells = []
+            for t in ids:
+                s = summarize_half(results[t]["views"][v], key, cfg)
+                cells.append(f"{f(s['mean'], d)} [{f(s['lo'], d)}, {f(s['hi'], d)}]")
+            pairs = ", ".join(f"{a}–{b}" for a, b in half_overlaps(results, v, key, cfg)) or "none"
+            L.append(f"| {label} | " + " | ".join(cells) + f" | {pairs} |")
+
         ranks = rank_comparison(results, v, cfg)
         L += ["", f"## Rank order, view {v} (richest first)", "",
               "*Equal length* ranks the mean of the non-overlapping samples; *random* ranks the mean of the random windows.", "",
-              "| Measure | Whole texts | Equal length | Same order? | Random windows | Same as equal length? |",
-              "|---|---|---|---|---|---|"]
+              "*Half length* ranks the mean of the half-length windows.", "",
+              "| Measure | Whole texts | Equal length | Same order? | Random windows | Same as equal length? | "
+              "Half-length windows | Same as equal length? |",
+              "|---|---|---|---|---|---|---|---|"]
         for key, r in ranks.items():
             L.append(f"| {meas[key][0]} | {' > '.join(r['whole'])} | {' > '.join(r['equal'])} | "
-                     f"{'yes' if r['same'] else 'no'} | {' > '.join(r['random'])} | {'yes' if r['same_random'] else 'no'} |")
+                     f"{'yes' if r['same'] else 'no'} | {' > '.join(r['random'])} | {'yes' if r['same_random'] else 'no'} | "
+                     f"{' > '.join(r['half'])} | {'yes' if r['same_half'] else 'no'} |")
 
     L += ["", "## Sentence length (Stanza sentences)", "",
           "Words per sentence counts word tokens only; sentences with no word token are excluded. Punctuation: "

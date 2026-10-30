@@ -5,7 +5,7 @@ Tables only. Tokens: word tokens (`is_word = 1`), Stanza lemma lowercased, ё �
 Views: **all** (stop words kept; primary) and **content** (Stanza UPOS in NOUN, VERB, ADJ, ADV, PROPN).
 
 Parameters: MSTTR chunk 2,000 (final partial chunk dropped if shorter than 0.5 of a chunk); MATTR windows 100, 500, 1000 (primary 500); MTLD bidirectional, threshold 0.72; HD-D sample 42; Yule's K = 10,000 · (Σ i² V_i − N) / N²; Honoré's R = 100 · ln N / (1 − V1/V); entropy log2.
-Bootstrap: paragraphs resampled with replacement, 1,000 resamples, percentile 95% intervals; master seed 20261026, generator numpy `default_rng([20261026, stream, text index])`, stream 0 = bootstrap, 1 = random windows.
+Bootstrap: paragraphs resampled with replacement, 1,000 resamples, percentile 95% intervals; master seed 20261026, generator numpy `default_rng([20261026, stream, text index])`, stream 0 = bootstrap, 1 = random windows, 2 = half-length windows.
 
 ## Tokens and equal-length samples
 
@@ -113,21 +113,39 @@ Mean over the non-overlapping samples (k = number of samples); then the mean of 
 | Honoré's R | 2,121.1 (k=2); 2,109.6 [2,034.8, 2,158.9] | 2,080.9 (k=1) | 2,106.2 (k=1); 2,122.1 [2,105.5, 2,137.9] | 2,154.7 (k=1); 2,156.7 [2,114.8, 2,187.2] | 2,111.8 (k=1); 2,136.6 [2,105.9, 2,162.9] |
 | Unigram entropy (bits) | 9.794 (k=2); 9.820 [9.656, 9.908] | 9.472 (k=1) | 9.572 (k=1); 9.580 [9.565, 9.598] | 9.351 (k=1); 9.275 [9.126, 9.363] | 9.373 (k=1); 9.303 [9.145, 9.389] |
 
+## Half-length windows, view all
+
+200 random windows of 24,000 tokens (N // 2) per text, every text included, drawn like the random windows above (stream 2): mean and central 95% range. *Overlapping pairs*: text pairs whose ranges overlap.
+
+| Measure | Ru1 | Ru2 | Ru3 | Ru4 | Ru5 | Overlapping pairs |
+|---|---|---|---|---|---|---|
+| MSTTR | 0.397 [0.381, 0.430] | 0.369 [0.364, 0.378] | 0.372 [0.363, 0.381] | 0.346 [0.327, 0.373] | 0.342 [0.321, 0.369] | Ru1–Ru3, Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+| MATTR (100) | 0.772 [0.763, 0.788] | 0.736 [0.731, 0.739] | 0.740 [0.727, 0.747] | 0.702 [0.687, 0.719] | 0.716 [0.705, 0.733] | Ru2–Ru3, Ru2–Ru5, Ru3–Ru5, Ru4–Ru5 |
+| MATTR (500) | 0.561 [0.549, 0.585] | 0.532 [0.527, 0.540] | 0.533 [0.524, 0.542] | 0.496 [0.478, 0.522] | 0.499 [0.481, 0.526] | Ru2–Ru3, Ru3–Ru5, Ru4–Ru5 |
+| MATTR (1000) | 0.475 [0.462, 0.504] | 0.447 [0.442, 0.456] | 0.450 [0.440, 0.460] | 0.417 [0.398, 0.445] | 0.416 [0.396, 0.444] | Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+| MTLD | 140.3 [128.5, 162.2] | 102.3 [97.6, 105.0] | 105.6 [94.7, 112.7] | 78.4 [68.2, 91.1] | 90.2 [83.6, 103.2] | Ru2–Ru3, Ru2–Ru5, Ru3–Ru5, Ru4–Ru5 |
+| HD-D | 0.901 [0.894, 0.912] | 0.885 [0.880, 0.887] | 0.890 [0.883, 0.894] | 0.860 [0.848, 0.873] | 0.873 [0.864, 0.884] | Ru2–Ru3, Ru2–Ru5, Ru3–Ru5, Ru4–Ru5 |
+| Yule's K | 62.11 [54.69, 69.43] | 75.54 [72.54, 80.90] | 70.40 [67.17, 78.40] | 101.41 [91.34, 112.24] | 86.05 [78.91, 92.49] | Ru1–Ru3, Ru2–Ru3, Ru2–Ru5, Ru4–Ru5 |
+| Honoré's R | 2,131.0 [2,038.2, 2,258.6] | 2,129.7 [2,016.0, 2,189.3] | 2,136.9 [2,052.0, 2,202.5] | 2,165.6 [2,065.1, 2,216.8] | 2,143.5 [2,017.7, 2,211.0] | Ru1–Ru2, Ru1–Ru3, Ru1–Ru4, Ru1–Ru5, Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+| Unigram entropy (bits) | 9.598 [9.457, 9.899] | 9.340 [9.296, 9.375] | 9.400 [9.296, 9.477] | 9.061 [8.848, 9.340] | 9.110 [8.909, 9.375] | Ru1–Ru3, Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+
 ## Rank order, view all (richest first)
 
 *Equal length* ranks the mean of the non-overlapping samples; *random* ranks the mean of the random windows.
 
-| Measure | Whole texts | Equal length | Same order? | Random windows | Same as equal length? |
-|---|---|---|---|---|---|
-| MSTTR | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
-| MATTR (100) | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
-| MATTR (500) | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
-| MATTR (1000) | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
-| MTLD | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
-| HD-D | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
-| Yule's K | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
-| Honoré's R | Ru4 > Ru5 > Ru3 > Ru1 > Ru2 | Ru4 > Ru1 > Ru5 > Ru3 > Ru2 | no | Ru4 > Ru5 > Ru3 > Ru1 > Ru2 | no |
-| Unigram entropy (bits) | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
+*Half length* ranks the mean of the half-length windows.
+
+| Measure | Whole texts | Equal length | Same order? | Random windows | Same as equal length? | Half-length windows | Same as equal length? |
+|---|---|---|---|---|---|---|---|
+| MSTTR | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
+| MATTR (100) | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
+| MATTR (500) | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
+| MATTR (1000) | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
+| MTLD | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
+| HD-D | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
+| Yule's K | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
+| Honoré's R | Ru4 > Ru5 > Ru3 > Ru1 > Ru2 | Ru4 > Ru1 > Ru5 > Ru3 > Ru2 | no | Ru4 > Ru5 > Ru3 > Ru1 > Ru2 | no | Ru4 > Ru5 > Ru3 > Ru1 > Ru2 | no |
+| Unigram entropy (bits) | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | yes |
 
 ## Whole texts, view content
 
@@ -161,21 +179,39 @@ Mean over the non-overlapping samples (k = number of samples); then the mean of 
 | Honoré's R | 2,079.1 (k=2); 2,044.9 [1,963.4, 2,099.9] | 2,003.3 (k=1) | 2,043.4 (k=1); 2,056.8 [2,043.1, 2,069.5] | 2,077.3 (k=1); 2,076.2 [2,046.6, 2,100.5] | 2,036.7 (k=1); 2,054.5 [2,024.9, 2,077.1] |
 | Unigram entropy (bits) | 11.130 (k=2); 11.130 [10.997, 11.222] | 10.811 (k=1) | 10.868 (k=1); 10.871 [10.852, 10.900] | 10.793 (k=1); 10.756 [10.669, 10.795] | 10.706 (k=1); 10.670 [10.537, 10.720] |
 
+## Half-length windows, view content
+
+200 random windows of 12,500 tokens (N // 2) per text, every text included, drawn like the random windows above (stream 2): mean and central 95% range. *Overlapping pairs*: text pairs whose ranges overlap.
+
+| Measure | Ru1 | Ru2 | Ru3 | Ru4 | Ru5 | Overlapping pairs |
+|---|---|---|---|---|---|---|
+| MSTTR | 0.541 [0.522, 0.586] | 0.501 [0.492, 0.509] | 0.505 [0.488, 0.524] | 0.487 [0.467, 0.525] | 0.477 [0.451, 0.518] | Ru1–Ru3, Ru1–Ru4, Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+| MATTR (100) | 0.874 [0.864, 0.888] | 0.844 [0.840, 0.849] | 0.841 [0.827, 0.853] | 0.821 [0.809, 0.838] | 0.820 [0.807, 0.837] | Ru2–Ru3, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+| MATTR (500) | 0.718 [0.699, 0.748] | 0.680 [0.674, 0.686] | 0.682 [0.664, 0.700] | 0.654 [0.637, 0.686] | 0.646 [0.625, 0.679] | Ru1–Ru3, Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+| MATTR (1000) | 0.633 [0.612, 0.673] | 0.594 [0.588, 0.600] | 0.596 [0.578, 0.615] | 0.573 [0.554, 0.611] | 0.563 [0.540, 0.603] | Ru1–Ru3, Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+| MTLD | 452.2 [386.5, 616.9] | 278.0 [253.7, 323.1] | 286.0 [199.2, 363.3] | 222.1 [184.1, 304.0] | 218.3 [177.4, 292.1] | Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+| HD-D | 0.975 [0.971, 0.982] | 0.965 [0.963, 0.967] | 0.967 [0.962, 0.970] | 0.959 [0.952, 0.969] | 0.959 [0.951, 0.968] | Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+| Yule's K | 13.06 [9.22, 15.08] | 18.76 [17.21, 20.23] | 17.27 [15.58, 20.79] | 22.55 [16.63, 26.95] | 22.41 [16.84, 27.12] | Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+| Honoré's R | 2,088.4 [1,988.1, 2,240.4] | 2,075.5 [1,962.8, 2,148.8] | 2,085.2 [2,003.9, 2,150.6] | 2,109.9 [2,018.7, 2,166.2] | 2,078.3 [1,973.8, 2,147.4] | Ru1–Ru2, Ru1–Ru3, Ru1–Ru4, Ru1–Ru5, Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+| Unigram entropy (bits) | 10.781 [10.633, 11.113] | 10.502 [10.434, 10.550] | 10.550 [10.387, 10.653] | 10.391 [10.219, 10.694] | 10.331 [10.105, 10.642] | Ru1–Ru3, Ru1–Ru4, Ru1–Ru5, Ru2–Ru3, Ru2–Ru4, Ru2–Ru5, Ru3–Ru4, Ru3–Ru5, Ru4–Ru5 |
+
 ## Rank order, view content (richest first)
 
 *Equal length* ranks the mean of the non-overlapping samples; *random* ranks the mean of the random windows.
 
-| Measure | Whole texts | Equal length | Same order? | Random windows | Same as equal length? |
-|---|---|---|---|---|---|
-| MSTTR | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
-| MATTR (100) | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | yes | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | yes |
-| MATTR (500) | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
-| MATTR (1000) | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
-| MTLD | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | yes | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | yes |
-| HD-D | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
-| Yule's K | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
-| Honoré's R | Ru4 > Ru5 > Ru3 > Ru1 > Ru2 | Ru1 > Ru4 > Ru3 > Ru5 > Ru2 | no | Ru4 > Ru3 > Ru5 > Ru1 > Ru2 | no |
-| Unigram entropy (bits) | Ru1 > Ru3 > Ru4 > Ru2 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | no | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
+*Half length* ranks the mean of the half-length windows.
+
+| Measure | Whole texts | Equal length | Same order? | Random windows | Same as equal length? | Half-length windows | Same as equal length? |
+|---|---|---|---|---|---|---|---|
+| MSTTR | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
+| MATTR (100) | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | yes | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | yes | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | yes |
+| MATTR (500) | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
+| MATTR (1000) | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
+| MTLD | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | yes | Ru1 > Ru2 > Ru3 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | no |
+| HD-D | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
+| Yule's K | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru5 > Ru4 | no |
+| Honoré's R | Ru4 > Ru5 > Ru3 > Ru1 > Ru2 | Ru1 > Ru4 > Ru3 > Ru5 > Ru2 | no | Ru4 > Ru3 > Ru5 > Ru1 > Ru2 | no | Ru4 > Ru1 > Ru3 > Ru5 > Ru2 | no |
+| Unigram entropy (bits) | Ru1 > Ru3 > Ru4 > Ru2 > Ru5 | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | no | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes | Ru1 > Ru3 > Ru2 > Ru4 > Ru5 | yes |
 
 ## Sentence length (Stanza sentences)
 
