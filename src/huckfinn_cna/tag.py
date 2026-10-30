@@ -9,6 +9,7 @@ config changes (hash recorded in Ru#.meta.json).
 
 Usage:
     uv run python -m huckfinn_cna.tag [--config PATH] [--download]
+    uv run python -m huckfinn_cna.tag --download-only      # setup: fetch the Stanza models, tag nothing
 """
 
 from __future__ import annotations
@@ -302,10 +303,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--download", action="store_true", help="download the configured Stanza models first")
+    parser.add_argument("--download-only", action="store_true", help="download the configured Stanza models and exit (setup)")
     args = parser.parse_args()
-    if args.download:
+    if args.download or args.download_only:
         config = load_config(args.config)
         download_models(config["tag"], repo_path(config, "stanza_model_dir"))
+        if args.download_only:
+            return
     for text_id, meta in run(args.config).items():
         state = "cached" if meta["cached"] else "tagged"
         print(f"{text_id}: {state}; {meta['paragraphs']} paragraphs, {meta['sentences']} sentences, "

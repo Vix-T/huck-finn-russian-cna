@@ -35,7 +35,7 @@ Where to read more:
 git clone <this repository> huck-finn-russian-cna && cd huck-finn-russian-cna
 uv sync --frozen                                  # Python 3.12 + locked dependencies, incl. spaCy ru_core_news_lg 3.8.0
 tools/mfinder/build.sh                            # builds tools/mfinder/bin/mfinder from the vendored mfinder 1.2 source with seed.patch
-uv run --frozen python -m huckfinn_cna.tag --download   # Stanza 1.15.0 Russian models into models/stanza/
+uv run --frozen python -m huckfinn_cna.tag --download-only   # Stanza 1.15.0 Russian models into models/stanza/
 uv run --frozen python -m unittest discover tests        # optional: the test suite
 ```
 

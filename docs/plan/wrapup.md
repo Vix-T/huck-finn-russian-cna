@@ -43,3 +43,9 @@ embedding = main-text Figure 8, MDS and PCA in the appendix); (c) recorded (deci
 amendment §4 and at each abridged comparison; (d) already confirmed, no flag; (e) added to §8.1.
 Item 5 (fresh-copy test) is CPU-heavy (tagging, betweenness shuffles, mfinder) and could not finish before
 19:30, so it waits until the length-matched run has finished.
+
+Fresh copy (19:31–19:33, in the session scratchpad): clone from the local path, raw texts copied, `uv sync --frozen`
+OK, `tools/mfinder/build.sh` OK (binary SHA-256 `3241534e…` differs from the recorded `c0734777…`, newer OS and
+compiler; output identity to be checked against the R = 2 rehearsal runs), Stanza models downloaded. Broke:
+`tag --download` downloads and then tags, which fails before cleaning; fixed with `tag --download-only` for setup.
+The `--quick` run waits until the length-matched run has finished (project owner's choice).

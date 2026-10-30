@@ -16,7 +16,7 @@
 #             A few minutes for mfinder; tagging and betweenness dominate the run time.
 #
 # Needs: uv sync --frozen; tools/mfinder/build.sh; the Stanza models (uv run --frozen python -m huckfinn_cna.tag
-# --download); the raw texts in data/raw/ (see README.md); the old repository at [paths].old_repo for the
+# --download-only); the raw texts in data/raw/ (see README.md); the old repository at [paths].old_repo for the
 # old-vs-new comparisons. Exits non-zero at the first failing step or if any compared report differs.
 #
 # Usage: scripts/reproduce.sh [--quick]
@@ -65,7 +65,7 @@ py -m huckfinn_cna.clean
 
 step "3. Tokenization and tagging (Stanza + spaCy), POS check"
 if [ ! -f "$model_dir/resources.json" ]; then
-    echo "no Stanza models in $model_dir; run: uv run --frozen python -m huckfinn_cna.tag --download" >&2
+    echo "no Stanza models in $model_dir; run: uv run --frozen python -m huckfinn_cna.tag --download-only" >&2
     exit 2
 fi
 py -m huckfinn_cna.tag
